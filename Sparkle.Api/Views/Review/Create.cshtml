@@ -1,0 +1,369 @@
+@{
+    ViewData["Title"] = "Write a Review";
+    Layout = "_ProfileLayout";
+    var product = ViewBag.Product as Sparkle.Domain.Catalog.Product;
+    var eligibility = ViewBag.Eligibility as Sparkle.Api.Services.ReviewEligibility;
+}
+
+<style>
+    .review-form-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    .product-header {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    .product-header-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        object-fit: cover;
+        border: 3px solid rgba(255,255,255,0.3);
+    }
+    .product-header h4 {
+        margin: 0 0 0.25rem;
+    }
+    .product-header p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 0.9rem;
+    }
+    .verified-badge {
+        background: rgba(255,255,255,0.2);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        display: inline-block;
+    }
+    .form-section {
+        padding: 1.5rem;
+    }
+    .section-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .star-rating {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .star-btn {
+        background: none;
+        border: none;
+        font-size: 2.5rem;
+        color: #d1d5db;
+        cursor: pointer;
+        transition: transform 0.1s, color 0.2s;
+        padding: 0;
+    }
+    .star-btn:hover {
+        transform: scale(1.2);
+    }
+    .star-btn.active {
+        color: #fbbf24;
+    }
+    .rating-text {
+        font-weight: 500;
+        color: #64748b;
+        margin-bottom: 1rem;
+    }
+    .image-upload-area {
+        border: 2px dashed #e2e8f0;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .image-upload-area:hover {
+        border-color: #fbbf24;
+        background: #fffbeb;
+    }
+    .image-preview-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    .image-preview {
+        width: 80px;
+        height: 80px;
+        border-radius: 8px;
+        object-fit: cover;
+        position: relative;
+    }
+    .image-preview-wrapper {
+        position: relative;
+    }
+    .remove-image {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .sub-rating {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .sub-rating-label {
+        width: 140px;
+        font-size: 0.9rem;
+        color: #64748b;
+    }
+    .sub-rating-stars {
+        display: flex;
+        gap: 0.25rem;
+    }
+    .sub-star {
+        font-size: 1.25rem;
+        color: #d1d5db;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .sub-star.active {
+        color: #fbbf24;
+    }
+    .submit-section {
+        background: #f8fafc;
+        padding: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+
+<div class="review-form-card">
+    @if (product != null)
+    {
+        <div class="product-header">
+            @if (product.Images?.Any() == true)
+            {
+                <img src="@product.Images.First().Url" alt="@product.Title" class="product-header-image" />
+            }
+            <div>
+                <h4>@product.Title</h4>
+                <p>Sold by @(product.Seller?.ShopName ?? "Sparkle")</p>
+                @if (eligibility?.PurchaseDate.HasValue == true)
+                {
+                    <div class="verified-badge">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Purchased on @eligibility.PurchaseDate.Value.ToString("MMM d, yyyy")
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    
+    <form asp-action="Create" method="post" enctype="multipart/form-data" id="reviewForm">
+        <input type="hidden" name="productId" value="@product?.Id" />
+        <input type="hidden" name="rating" id="ratingInput" value="0" />
+        <input type="hidden" name="qualityRating" id="qualityRatingInput" value="" />
+        <input type="hidden" name="valueForMoneyRating" id="valueRatingInput" value="" />
+        <input type="hidden" name="accuracyRating" id="accuracyRatingInput" value="" />
+        
+        <div class="form-section border-bottom">
+            <div class="section-title">
+                <i class="bi bi-star-fill text-warning"></i>
+                Overall Rating <span class="text-danger">*</span>
+            </div>
+            
+            <div class="star-rating" id="mainRating">
+                <button type="button" class="star-btn" data-rating="1">
+                    <i class="bi bi-star-fill"></i>
+                </button>
+                <button type="button" class="star-btn" data-rating="2">
+                    <i class="bi bi-star-fill"></i>
+                </button>
+                <button type="button" class="star-btn" data-rating="3">
+                    <i class="bi bi-star-fill"></i>
+                </button>
+                <button type="button" class="star-btn" data-rating="4">
+                    <i class="bi bi-star-fill"></i>
+                </button>
+                <button type="button" class="star-btn" data-rating="5">
+                    <i class="bi bi-star-fill"></i>
+                </button>
+            </div>
+            <div class="rating-text" id="ratingText">Click stars to rate</div>
+        </div>
+        
+        <div class="form-section border-bottom">
+            <div class="section-title">
+                <i class="bi bi-chat-text text-primary"></i>
+                Your Review
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Review Title (Optional)</label>
+                <input type="text" name="title" class="form-control" placeholder="Summarize your experience" maxlength="100" />
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Your Review</label>
+                <textarea name="comment" class="form-control" rows="4" 
+                          placeholder="Share your experience with this product. What did you like or dislike?"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section border-bottom">
+            <div class="section-title">
+                <i class="bi bi-sliders text-success"></i>
+                Detailed Ratings (Optional)
+            </div>
+            
+            <div class="sub-rating">
+                <span class="sub-rating-label">Product Quality</span>
+                <div class="sub-rating-stars" data-target="qualityRatingInput">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <i class="bi bi-star-fill sub-star" data-value="@i"></i>
+                    }
+                </div>
+            </div>
+            
+            <div class="sub-rating">
+                <span class="sub-rating-label">Value for Money</span>
+                <div class="sub-rating-stars" data-target="valueRatingInput">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <i class="bi bi-star-fill sub-star" data-value="@i"></i>
+                    }
+                </div>
+            </div>
+            
+            <div class="sub-rating">
+                <span class="sub-rating-label">Matches Description</span>
+                <div class="sub-rating-stars" data-target="accuracyRatingInput">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <i class="bi bi-star-fill sub-star" data-value="@i"></i>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-image text-info"></i>
+                Add Photos (Optional)
+            </div>
+            <p class="text-muted mb-3">Add up to 5 photos to help other customers</p>
+            
+            <label class="image-upload-area" for="imageUpload">
+                <i class="bi bi-cloud-upload" style="font-size: 2rem; color: #94a3b8;"></i>
+                <p class="mb-0 mt-2 text-muted">Click to upload images</p>
+                <small class="text-muted">Max 5 images, 5MB each</small>
+            </label>
+            <input type="file" name="images" id="imageUpload" multiple accept="image/*" class="d-none" />
+            
+            <div class="image-preview-container" id="imagePreviewContainer"></div>
+        </div>
+        
+        <div class="submit-section">
+            <a href="@Url.Action("Index")" class="btn btn-light">
+                <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+            <button type="submit" class="btn btn-warning px-4" id="submitBtn" disabled>
+                <i class="bi bi-send me-2"></i>Submit Review
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Main rating
+    const ratingTexts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+    const mainStars = document.querySelectorAll('#mainRating .star-btn');
+    const ratingInput = document.getElementById('ratingInput');
+    const ratingText = document.getElementById('ratingText');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    mainStars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.dataset.rating);
+            ratingInput.value = rating;
+            
+            mainStars.forEach((s, index) => {
+                s.classList.toggle('active', index < rating);
+            });
+            
+            ratingText.textContent = ratingTexts[rating];
+            submitBtn.disabled = false;
+        });
+    });
+    
+    // Sub ratings
+    document.querySelectorAll('.sub-rating-stars').forEach(container => {
+        const stars = container.querySelectorAll('.sub-star');
+        const targetId = container.dataset.target;
+        
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const value = parseInt(this.dataset.value);
+                document.getElementById(targetId).value = value;
+                
+                stars.forEach((s, index) => {
+                    s.classList.toggle('active', index < value);
+                });
+            });
+        });
+    });
+    
+    // Image upload preview
+    const imageUpload = document.getElementById('imageUpload');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    
+    imageUpload.addEventListener('change', function() {
+        previewContainer.innerHTML = '';
+        const files = Array.from(this.files).slice(0, 5);
+        
+        files.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'image-preview-wrapper';
+                wrapper.innerHTML = `
+                    <img src="${e.target.result}" class="image-preview" />
+                    <button type="button" class="remove-image" onclick="removeImage(${index})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                `;
+                previewContainer.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+    
+    function removeImage(index) {
+        const dt = new DataTransfer();
+        const files = Array.from(imageUpload.files);
+        files.forEach((file, i) => {
+            if (i !== index) dt.items.add(file);
+        });
+        imageUpload.files = dt.files;
+        imageUpload.dispatchEvent(new Event('change'));
+    }
+</script>

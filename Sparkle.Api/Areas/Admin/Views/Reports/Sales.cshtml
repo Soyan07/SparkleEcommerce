@@ -1,0 +1,81 @@
+@model IEnumerable<Sparkle.Api.Areas.Admin.Controllers.ReportsController.SalesReportItem>
+@{
+    ViewData["Title"] = "Sales Report";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold">Sales Report</h4>
+        <p class="text-muted mb-0">Revenue analysis and trends</p>
+    </div>
+    <a href="/Admin/Reports" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Revenue</h6>
+                <h3 class="mb-0 text-success">৳@((decimal)ViewBag.TotalRevenue).ToString("N0")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Orders</h6>
+                <h3 class="mb-0 text-primary">@((int)ViewBag.TotalOrders)</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">From Date</label>
+                <input type="date" name="from" class="form-control" value="@(ViewBag.FromDate?.ToString("yyyy-MM-dd"))">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">To Date</label>
+                <input type="date" name="to" class="form-control" value="@(ViewBag.ToDate?.ToString("yyyy-MM-dd"))">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Date</th>
+                        <th>Orders</th>
+                        <th>Revenue</th>
+                        <th class="pe-4">Avg Order Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4">@item.Date.ToString("MMM dd, yyyy")</td>
+                            <td>@item.TotalOrders orders</td>
+                            <td class="text-success fw-bold">৳@item.TotalRevenue.ToString("N0")</td>
+                            <td class="pe-4 text-muted">৳@item.AverageOrderValue.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

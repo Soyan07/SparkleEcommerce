@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -10,22 +11,28 @@ using Sparkle.Infrastructure;
 using Sparkle.Domain.Identity;
 using Sparkle.Infrastructure.Services;
 using Sparkle.Api.Services;
+using Sparkle.Domain.Configuration;
 using StackExchange.Redis;
-
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args); // Trigger Restart 2
 
 // Database & Identity
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<ApplicationDbContext>(options => 
+    options.UseSqlServer(connectionString, sqlOptions => {
+        sqlOptions.CommandTimeout(180);
+        sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null);
+        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    }));
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
-        options.Password.RequireDigit = false;
-        options.Password.RequireLowercase = false;
-        options.Password.RequireUppercase = false;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Password.RequiredLength = 4;
+        // Password settings
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = false; // User didn't explicitly ask, but good practice. Kept false to strictly follow "num and word" minimal request, but example has Uppercase. Let's keep false to not be too annoying, enforcing Alphanumeric is key.
+        options.Password.RequireNonAlphanumeric = false; // User didn't explicitly ask for symbols in text description, though example has it.
+        options.Password.RequiredLength = 6;
         
         // Lockout settings
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
@@ -108,43 +115,50 @@ builder.Services.AddScoped<Sparkle.Infrastructure.Services.ICommissionService, S
 builder.Services.AddScoped<Sparkle.Domain.Marketing.ILoyaltyService, Sparkle.Infrastructure.Services.LoyaltyService>();
 builder.Services.AddScoped<Sparkle.Domain.Configuration.ISettingsService, Sparkle.Api.Services.SettingsService>();
 builder.Services.AddTransient<Sparkle.Infrastructure.Services.LocationSeedingService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IDynamicFormService, Sparkle.Api.Services.DynamicFormService>();
+builder.Services.AddScoped<Sparkle.Api.Services.DynamicFormSeedingService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IProductService, Sparkle.Api.Services.ProductService>();
+builder.Services.AddScoped<Sparkle.Infrastructure.Services.ShipmentService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IReviewService, Sparkle.Api.Services.ReviewService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IEmailService, Sparkle.Api.Services.EmailService>();
+builder.Services.AddScoped<Sparkle.Api.Services.ICachingService, Sparkle.Api.Services.RedisCachingService>();
+builder.Services.AddScoped<Sparkle.Api.Services.ISellerPerformanceService, Sparkle.Api.Services.SellerPerformanceService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IInvoiceService, Sparkle.Api.Services.InvoiceService>();
+builder.Services.AddScoped<Sparkle.Infrastructure.Services.IAIService, Sparkle.Infrastructure.Services.AIService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IStockManagementService, Sparkle.Api.Services.StockManagementService>();
+
+// Homepage Sections & Intelligent Analysis Services
+builder.Services.AddScoped<Sparkle.Api.Services.IHomepageSectionService, Sparkle.Api.Services.HomepageSectionService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IIntelligentProductAnalysisService, Sparkle.Api.Services.IntelligentProductAnalysisService>();
+builder.Services.AddScoped<Sparkle.Api.Services.IAIRecommendationService, Sparkle.Api.Services.AIRecommendationService>();
+builder.Services.AddScoped<Sparkle.Api.Services.HomepageSectionSeedingService>();
+
+// Seller Authorization & Stock Management
+builder.Services.AddScoped<Sparkle.Api.Services.ISellerAuthorizationService, Sparkle.Api.Services.SellerAuthorizationService>();
+
+// New Platform Services from Package
+builder.Services.AddScoped<Sparkle.Domain.Intelligence.ISmartSearchService, Sparkle.Infrastructure.Intelligence.SmartSearchService>();
+builder.Services.AddScoped<Sparkle.Infrastructure.Services.IWalletService, Sparkle.Infrastructure.Services.WalletService>();
+builder.Services.AddScoped<Sparkle.Infrastructure.Services.ISupportService, Sparkle.Infrastructure.Services.SupportService>();
+builder.Services.AddScoped<Sparkle.Infrastructure.Services.ILogisticsService, Sparkle.Infrastructure.Services.LogisticsService>();
+builder.Services.AddScoped<Sparkle.Infrastructure.Services.INotificationService, Sparkle.Api.Services.NotificationService>();
+builder.Services.AddScoped<Sparkle.Infrastructure.Services.IPaymentService, Sparkle.Infrastructure.Services.SSLCommerzService>();
+
+// Swagger/OpenAPI Documentation
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // SignalR with Redis Backplane (optional - falls back to in-memory if Redis unavailable)
-// SignalR with Redis Backplane (optional - falls back to in-memory if Redis unavailable)
-try
-{
-    var redisConnection = ConnectionMultiplexer.Connect("localhost:6379,connectTimeout=1000");
-    builder.Services.AddSingleton<IConnectionMultiplexer>(redisConnection);
-    
-    builder.Services.AddSignalR()
-        .AddStackExchangeRedis("localhost:6379", options =>
-        {
-            options.Configuration.ChannelPrefix = RedisChannel.Literal("SparkleHub");
-        });
-    
-    // Redis Distributed Cache
-    builder.Services.AddStackExchangeRedisCache(options =>
-    {
-        options.Configuration = "localhost:6379";
-        options.InstanceName = "Sparkle_";
-    });
-    
-    Console.WriteLine("[OK] Redis connected for SignalR and caching");
-}
-catch
-{
-    // Redis is optional for development/single-server
-    Console.WriteLine("[INFO] Redis not found. Using in-memory SignalR and Caching (standard for local development).");
-    builder.Services.AddSignalR(); // Falls back to in-memory
-    builder.Services.AddDistributedMemoryCache(); // In-memory cache fallback
-}
-
+builder.Services.AddSignalR();
 // Session Support for Checkout
+builder.Services.AddDistributedMemoryCache(); // Force Memory Cache for reliability
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.IdleTimeout = TimeSpan.FromMinutes(60);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.Name = ".Sparkle.Session";
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 // Response Compression for better performance
@@ -184,27 +198,27 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Seed default roles/admin user
+// Seed default roles/admin user and Initialize DB
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var db = services.GetRequiredService<ApplicationDbContext>();
     var logger = services.GetRequiredService<ILogger<Program>>();
+    var db = services.GetRequiredService<ApplicationDbContext>();
 
     try
     {
-        // Apply pending migrations
-        Console.WriteLine("Initializing database...");
-        logger.LogInformation("Applying migrations...");
-        await db.Database.MigrateAsync();
-        Console.WriteLine("Database initialized successfully");
-        logger.LogInformation("Database initialized successfully");
+        // New Robust DB Initialization (Includes Schema Repair and Optimization)
+        await Sparkle.Api.Data.DbInitializer.InitializeAsync(services);
+        
+        // Seed Homepage Sections
+        var sectionSeeder = services.GetRequiredService<Sparkle.Api.Services.HomepageSectionSeedingService>();
+        await sectionSeeder.SeedAsync();
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "Database migration had warnings - continuing startup. Details: {Message}", ex.Message);
-        // Continue even if migrations fail (database might already exist)
+        logger.LogError(ex, "An error occurred during database initialization.");
     }
+
 
     try
     {
@@ -239,6 +253,32 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
+        // Cleanup Guest Carts on Startup as requested
+        try 
+        {
+            var result = await db.Database.ExecuteSqlRawAsync("DELETE FROM [orders].[Carts] WHERE [UserId] LIKE 'guest_%'");
+            logger.LogInformation($"[Startup] Cleaned up {result} guest carts.");
+        }
+        catch (Exception ex)
+        {
+             logger.LogWarning(ex, "[Startup] Failed to cleanup guest carts.");
+        }
+
+        // Ensure chat DeletedFor column exists (for delete-for-me vs delete-for-everyone)
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('support.ChatMessages') AND name = 'DeletedFor')
+                BEGIN
+                    ALTER TABLE [support].[ChatMessages] ADD [DeletedFor] nvarchar(450) NULL;
+                END");
+            logger.LogInformation("[Startup] Chat DeletedFor column ensured.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Startup] Failed to ensure ChatMessages.DeletedFor column.");
+        }
+
         // Seed comprehensive categories (24 categories for Bangladesh e-commerce)
         // Ensure each required category slug exists even if the table already has older data
         var requiredCategories = new List<Category>
@@ -249,7 +289,7 @@ using (var scope = app.Services.CreateScope())
             new Category { Name = "Mobiles & Tablets", Slug = "mobiles-tablets" },
             new Category { Name = "Laptops & Computers", Slug = "laptops-computers" },
             new Category { Name = "Home Appliances", Slug = "home-appliances" },
-            new Category { Name = "Kitchen & Small Appliances", Slug = "kitchen-small-appliances" },
+            new Category { Name = "Kitchen Appliances", Slug = "kitchen-small-appliances" },
             new Category { Name = "Beauty & Personal Care", Slug = "beauty-personal-care" },
             new Category { Name = "Jewelry & Accessories", Slug = "jewelry-accessories" },
             new Category { Name = "Groceries & Essentials", Slug = "groceries-essentials" },
@@ -269,10 +309,14 @@ using (var scope = app.Services.CreateScope())
             new Category { Name = "Fitness & Gym", Slug = "fitness-gym" }
         };
 
+        var slugs = requiredCategories.Select(c => c.Slug).ToList();
+        var existingCategories = await db.Categories
+            .Where(c => slugs.Contains(c.Slug))
+            .ToDictionaryAsync(c => c.Slug);
+
         foreach (var cat in requiredCategories)
         {
-            var existing = await db.Categories.FirstOrDefaultAsync(c => c.Slug == cat.Slug);
-            if (existing == null)
+            if (!existingCategories.TryGetValue(cat.Slug, out var existing))
             {
                 db.Categories.Add(cat);
             }
@@ -344,9 +388,9 @@ using (var scope = app.Services.CreateScope())
                         UserId = sellerUser.Id,
                         ShopName = config.ShopName,
                         ShopDescription = config.ShopDescription,
-                        Status = SellerStatus.Active,
+                        Status = SellerStatus.Approved,
                         StoreLogo = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(config.ShopName)}&size=200&background=random",
-                        StoreBanner = $"https://via.placeholder.com/1200x300/6366f1/ffffff?text={Uri.EscapeDataString(config.ShopName)}",
+                        StoreBanner = $"https://placehold.co/1200x300/6366f1/ffffff?text={Uri.EscapeDataString(config.ShopName)}",
                         City = config.City,
                         District = config.District,
                         Country = "Bangladesh",
@@ -391,34 +435,66 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
-        // Seed Location Data (Zones & Areas)
+        // Seed Soyan's user account
+        var soyanEmail = "misoyan07@gmail.com";
+        var soyanUser = await userManager.FindByEmailAsync(soyanEmail);
+        if (soyanUser is null)
+        {
+            soyanUser = new ApplicationUser
+            {
+                UserName = soyanEmail,
+                Email = soyanEmail,
+                EmailConfirmed = true,
+                FullName = "Soyan"
+            };
+            var soyanCreate = await userManager.CreateAsync(soyanUser, "89694929Soyan@07");
+            if (soyanCreate.Succeeded)
+            {
+                await userManager.AddToRoleAsync(soyanUser, "User");
+            }
+        }
+
         if (!await db.DeliveryZones.AnyAsync())
         {
             var locationSeeder = services.GetRequiredService<Sparkle.Infrastructure.Services.LocationSeedingService>();
             var zones = locationSeeder.GetZones();
             db.DeliveryZones.AddRange(zones);
             await db.SaveChangesAsync();
-            
+
             var dhakaZone = await db.DeliveryZones.FirstOrDefaultAsync(z => z.Name == "Inside Dhaka");
             var suburbsZone = await db.DeliveryZones.FirstOrDefaultAsync(z => z.Name == "Dhaka Suburbs");
-            
+
             if (dhakaZone != null)
             {
                 var areas = locationSeeder.GetDhakaAreas();
-                foreach(var area in areas) area.ZoneId = dhakaZone.Id;
+                foreach (var area in areas) area.ZoneId = dhakaZone.Id;
                 db.DeliveryAreas.AddRange(areas);
             }
-            
+
             if (suburbsZone != null)
             {
                 var areas = locationSeeder.GetDhakaSuburbs();
-                foreach(var area in areas) area.ZoneId = suburbsZone.Id;
+                foreach (var area in areas) area.ZoneId = suburbsZone.Id;
                 db.DeliveryAreas.AddRange(areas);
             }
-            
+
             await db.SaveChangesAsync();
             logger.LogInformation("Seeded delivery zones and areas");
         }
+
+        // Seed Default Site Settings
+        if (!await db.SiteSettings.AnyAsync()) 
+        {
+             var settingsService = services.GetRequiredService<ISettingsService>();
+             await settingsService.SetStringValueAsync("SiteTitle", "Sparkle", "General", "string", "The name of the website");
+             await settingsService.SetStringValueAsync("SupportPhone", "16789", "General", "string", "Customer support phone number");
+             await settingsService.SetStringValueAsync("SupportEmail", "support@sparkle.com", "General", "string", "Customer support email address");
+             await settingsService.SetStringValueAsync("FooterCopyright", "Sparkle.com", "General", "string", "Copyright text for footer");
+        }
+
+        // Seed Dynamic Forms
+        var dynamicFormSeeder = services.GetRequiredService<Sparkle.Api.Services.DynamicFormSeedingService>();
+        await dynamicFormSeeder.SeedFormsAsync();
     }
     catch (Exception ex)
     {
@@ -441,7 +517,11 @@ else
 }
 
 // Enable response compression (must be before UseStaticFiles)
-app.UseResponseCompression();
+// Disable in Development to allow Hot Reload script injection
+if (!app.Environment.IsDevelopment())
+{
+    app.UseResponseCompression();
+}
 
 // Static files with caching
 app.UseStaticFiles(new StaticFileOptions
@@ -456,10 +536,29 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
-// Response caching middleware
-app.UseResponseCaching();
+app.UseResponseCaching(); // Re-enabled to fix VaryByQueryKeys error
 
 app.UseSession(); // Enable session for checkout flow
+
+// Global exception handler - must be early in pipeline
+app.UseMiddleware<Sparkle.Api.Middleware.GlobalExceptionMiddleware>();
+
+// Security headers middleware
+app.UseMiddleware<Sparkle.Api.Middleware.SecurityMiddleware>();
+
+// Admin action logging middleware
+app.UseMiddleware<Sparkle.Api.Middleware.AdminActionLoggingMiddleware>();
+
+// Swagger UI (only in Development)
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sparkle API V1");
+        options.RoutePrefix = "api-docs"; // Access at /api-docs
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -480,5 +579,6 @@ app.MapControllers();
 app.MapHub<Sparkle.Api.Hubs.InventoryHub>("/hubs/inventory");
 app.MapHub<Sparkle.Api.Hubs.OrderTrackingHub>("/hubs/ordertracking");
 app.MapHub<Sparkle.Api.Hubs.NotificationHub>("/hubs/notification");
+app.MapHub<Sparkle.Api.Hubs.ChatHub>("/hubs/chat");
 
 app.Run();

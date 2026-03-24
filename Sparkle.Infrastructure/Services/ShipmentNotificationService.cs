@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Sparkle.Domain.Orders;
+using Microsoft.Extensions.Logging;
 
 namespace Sparkle.Infrastructure.Services;
 
@@ -9,13 +10,17 @@ namespace Sparkle.Infrastructure.Services;
 public class ShipmentNotificationService
 {
     private readonly ApplicationDbContext _context;
-    // Add your email/SMS service dependencies here
-    // private readonly IEmailService _emailService;
-    // private readonly ISmsService _smsService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<ShipmentNotificationService> _logger;
 
-    public ShipmentNotificationService(ApplicationDbContext context)
+    public ShipmentNotificationService(
+        ApplicationDbContext context, 
+        INotificationService notificationService,
+        ILogger<ShipmentNotificationService> logger)
     {
         _context = context;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -181,11 +186,9 @@ public class ShipmentNotificationService
     {
         if (string.IsNullOrEmpty(email)) return;
 
-        // TODO: Integrate with your email service (SendGrid, AWS SES, etc.)
-        // await _emailService.SendAsync(email, subject, message);
-        
-        // For now, just log
-        Console.WriteLine($"[EMAIL] To: {email}, Subject: {subject}");
+        // Note: Integration point for external email service (e.g., SendGrid, AWS SES)
+        // For development/demo purposes, we are logging the email content.
+        _logger.LogInformation("[EMAIL SERVICE MOCK] To: {Email}, Subject: {Subject}, BodyLength: {Length}", email, subject, message?.Length ?? 0);
         await Task.CompletedTask;
     }
 
@@ -196,14 +199,15 @@ public class ShipmentNotificationService
     {
         if (string.IsNullOrEmpty(phone)) return;
 
-        // TODO: Integrate with your SMS service (Twilio, Nexmo, etc.)
-        // await _smsService.SendAsync(phone, message);
-        
-        // For now, just log
-        Console.WriteLine($"[SMS] To: {phone}, Message: {message}");
+        // Note: Integration point for external SMS service (e.g., Twilio, Nexmo)
+        // For development/demo purposes, we are logging the SMS content.
+        _logger.LogInformation("[SMS SERVICE MOCK] To: {Phone}, Message: {Message}", phone, message);
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Log notification to database
+    /// </summary>
     /// <summary>
     /// Log notification to database
     /// </summary>
@@ -211,23 +215,12 @@ public class ShipmentNotificationService
     {
         try
         {
-            var notification = new Domain.System.Notification
-            {
-                UserId = userId,
-                Type = type,
-                Title = title,
-                Message = message,
-                IsRead = false,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.SystemNotifications.Add(notification);
-            await _context.SaveChangesAsync();
+            await _notificationService.NotifyUserAsync(userId, title, message, type);
         }
         catch (Exception ex)
         {
-            // Log error but don't throw - notification logging shouldn't break the flow
-            Console.WriteLine($"Error logging notification: {ex.Message}");
+            // Log error but don't throw
+             _logger.LogError(ex, "Error logging notification");
         }
     }
 
@@ -245,7 +238,7 @@ public class ShipmentNotificationService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error sending notification for shipment {shipmentId}: {ex.Message}");
+                _logger.LogError(ex, "Error sending notification for shipment {ShipmentId}", shipmentId);
             }
         }
     }

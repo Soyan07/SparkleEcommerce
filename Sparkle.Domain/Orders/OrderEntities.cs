@@ -7,15 +7,42 @@ namespace Sparkle.Domain.Orders;
 
 public enum OrderStatus
 {
-    Pending,
-    Confirmed,
-    Processing,
-    Shipped,
-    OutForDelivery,
-    Delivered,
-    Cancelled,
-    Returned,
-    Refunded
+    // Initial
+    Pending = 0,
+    Confirmed = 1,
+    
+    // Seller Phase
+    SellerPreparing = 10,
+    ReadyForHandover = 11,
+    
+    // Pickup Phase
+    PickupScheduled = 20,
+    PickedUp = 21,
+    PickupFailed = 22,
+    
+    // Hub Phase
+    ReceivedAtHub = 30,
+    QCPassed = 31,
+    QCFailed = 32,
+    Sorting = 33,
+    
+    // Delivery Phase
+    OutForDelivery = 40,
+    DeliveryAttempted = 41,
+    Delivered = 50,
+    
+    // Exceptions
+    DeliveryFailed = 60,
+    ReturnToHub = 61,
+    ReturnRequested = 70,
+    Returned = 71,
+    Refunded = 80,
+    Cancelled = 90,
+    
+    // Legacy mappings (backward compatibility) - use unique values
+    Processing = 12,  // Maps to SellerPreparing
+    OnHold = 13,
+    Shipped = 42      // Legacy - similar to OutForDelivery but distinct value
 }
 
 public enum PaymentStatus
@@ -37,7 +64,8 @@ public enum PaymentMethodType
     CreditCard,
     DebitCard,
     BankTransfer,
-    SparkleWallet
+    SparkleWallet,
+    Instalment
 }
 
 // Keep legacy classes for backward compatibility
@@ -51,8 +79,10 @@ public class Address
     public string? Line2 { get; set; }
     public string City { get; set; } = default!;
     public string State { get; set; } = default!;
+    public string? Area { get; set; }
     public string PostalCode { get; set; } = default!;
     public string Country { get; set; } = default!;
+    public bool IsDefault { get; set; }
 }
 
 public class Cart
@@ -60,13 +90,24 @@ public class Cart
     public int Id { get; set; }
     public string UserId { get; set; } = default!;
     public ICollection<CartItem> Items { get; set; } = new List<CartItem>();
+
+    // Added for Coupon feature
+    public string? CouponCode { get; set; }
+    public decimal DiscountAmount { get; set; }
 }
 
 public class Wishlist
 {
     public int Id { get; set; }
+    [global::System.ComponentModel.DataAnnotations.MaxLength(450)]
     public string UserId { get; set; } = default!;
     public ICollection<WishlistItem> Items { get; set; } = new List<WishlistItem>();
+    
+    // Sharing features
+    public string? ShareToken { get; set; } // Unique token for sharing
+    public bool IsPublic { get; set; } = false;
+    public DateTime? SharedAt { get; set; }
+    public string? Name { get; set; } // Optional name for the wishlist
 }
 
 public class WishlistItem
@@ -89,6 +130,13 @@ public class CartItem
     public decimal UnitPrice { get; set; }
 }
 
+public enum DeliveryMode
+{
+    PlatformPickup = 0,   // Platform picks from seller
+    SellerDrop = 1,       // Seller drops to hub
+    CourierAssisted = 2   // Third-party courier
+}
+
 public class Order : BaseEntity
 {
     public string OrderNumber { get; set; } = string.Empty;
@@ -104,6 +152,13 @@ public class Order : BaseEntity
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
     public PaymentMethodType PaymentMethod { get; set; }
     
+    // Delivery Mode (Phase 2)
+    public DeliveryMode DeliveryMode { get; set; } = DeliveryMode.PlatformPickup;
+    public int? AssignedHubId { get; set; }
+    public int? PickupRiderId { get; set; }
+    public int? DeliveryRiderId { get; set; }
+    public int DeliveryAttempts { get; set; } = 0;
+    
     // Amounts
     public decimal SubTotal { get; set; }
     public decimal ShippingCost { get; set; }
@@ -112,6 +167,9 @@ public class Order : BaseEntity
     public decimal CouponDiscount { get; set; }
     public decimal VoucherDiscount { get; set; }
     public decimal TotalAmount { get; set; }
+    
+    // Coupon
+    public string? CouponCode { get; set; }
     
     // Payment Details
     public string? PaymentTransactionId { get; set; }
@@ -155,6 +213,7 @@ public class Order : BaseEntity
     public DateTime? EstimatedDeliveryDate { get; set; }
     
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
     public ICollection<OrderTracking> TrackingHistory { get; set; } = new List<OrderTracking>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 
@@ -164,8 +223,8 @@ public class Order : BaseEntity
     public decimal DiscountTotal { get => DiscountAmount; set => DiscountAmount = value; }
     public decimal ShippingFee { get => ShippingCost; set => ShippingCost = value; }
     public decimal Total { get => TotalAmount; set => TotalAmount = value; }
-    public DateTime CreatedAt { get => OrderDate; set => OrderDate = value; }
-    public int ShippingAddressId { get; set; } // Legacy property
+    public new DateTime CreatedAt { get => OrderDate; set => OrderDate = value; }
+    public int? ShippingAddressId { get; set; } // Legacy property, now optional
     public Address? ShippingAddress { get; set; } // Legacy navigation
 }
 
@@ -218,7 +277,7 @@ public class OrderTracking : BaseEntity
     public OrderStatus Status { get; set; }
     public string StatusMessage { get; set; } = string.Empty;
     public string? Location { get; set; }
-    public string? UpdatedBy { get; set; }
+    // UpdatedBy inherited from BaseEntity
     public DateTime TrackedAt { get; set; } = DateTime.UtcNow;
     public string? Notes { get; set; }
 }

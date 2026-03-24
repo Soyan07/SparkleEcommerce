@@ -8,4 +8,5 @@ public interface ISettingsService
     Task SetValueAsync<T>(string key, T value, string group = "General", string? description = null);
     Task<List<SiteSetting>> GetAllSettingsAsync();
     Task<List<SiteSetting>> GetSettingsByGroupAsync(string group);
+    Task<Dictionary<string, string>> GetBatchAsync(string[] keys);
 }

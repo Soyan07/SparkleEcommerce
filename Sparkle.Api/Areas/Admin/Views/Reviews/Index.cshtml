@@ -1,0 +1,374 @@
+@model List<Sparkle.Domain.Reviews.ProductReview>
+@{
+    ViewData["Title"] = "Review Moderation";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var currentFilter = ViewBag.CurrentFilter as string;
+    var currentSearch = ViewBag.CurrentSearch as string;
+}
+
+<style>
+    .mod-header {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+    }
+    .mod-stats {
+        display: flex;
+        gap: 2rem;
+    }
+    .mod-stat {
+        text-align: center;
+    }
+    .mod-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .mod-stat-label {
+        font-size: 0.8rem;
+        opacity: 0.9;
+    }
+    .filter-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .filter-tabs {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .filter-tab {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .filter-tab:hover {
+        border-color: #8b5cf6;
+        color: #8b5cf6;
+    }
+    .filter-tab.active {
+        background: #8b5cf6;
+        border-color: #8b5cf6;
+        color: white;
+    }
+    .review-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .review-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .review-table th {
+        background: #f8fafc;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.8rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .review-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    .review-table tr:hover {
+        background: #f8fafc;
+    }
+    .reviewer-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .reviewer-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .star-rating {
+        color: #fbbf24;
+    }
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .status-pending { background: #fef3c7; color: #b45309; }
+    .status-approved { background: #dcfce7; color: #16a34a; }
+    .status-rejected { background: #fee2e2; color: #dc2626; }
+    .report-badge {
+        background: #fef2f2;
+        color: #dc2626;
+        padding: 0.125rem 0.375rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+    }
+    .action-btns {
+        display: flex;
+        gap: 0.25rem;
+    }
+    .action-btn {
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .action-btn.approve {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+    .action-btn.reject {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    .action-btn.view {
+        background: #e0e7ff;
+        color: #4f46e5;
+    }
+    .action-btn:hover {
+        transform: scale(1.05);
+    }
+    .comment-preview {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.85rem;
+        color: #475569;
+    }
+    .product-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .product-cell img {
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
+        object-fit: cover;
+    }
+</style>
+
+<div class="mod-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-shield-check me-2"></i>Review Moderation</h4>
+            <p class="mb-0 opacity-75">Manage and moderate customer reviews</p>
+        </div>
+        <div class="mod-stats">
+            <div class="mod-stat">
+                <div class="mod-stat-value">@ViewBag.TotalReviews</div>
+                <div class="mod-stat-label">Total</div>
+            </div>
+            <div class="mod-stat">
+                <div class="mod-stat-value">@ViewBag.PendingCount</div>
+                <div class="mod-stat-label">Pending</div>
+            </div>
+            <div class="mod-stat">
+                <div class="mod-stat-value">@ViewBag.ReportedCount</div>
+                <div class="mod-stat-label">Reported</div>
+            </div>
+            <div class="mod-stat">
+                <div class="mod-stat-value">@(((double)ViewBag.AverageRating).ToString("F1"))⭐</div>
+                <div class="mod-stat-label">Avg Rating</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <div class="filter-tabs">
+        <a href="@Url.Action("Index")" class="filter-tab @(string.IsNullOrEmpty(currentFilter) ? "active" : "")">
+            All (@ViewBag.TotalReviews)
+        </a>
+        <a href="@Url.Action("Index", new { filter = "pending" })" class="filter-tab @(currentFilter == "pending" ? "active" : "")">
+            <i class="bi bi-clock me-1"></i>Pending (@ViewBag.PendingCount)
+        </a>
+        <a href="@Url.Action("Index", new { filter = "reported" })" class="filter-tab @(currentFilter == "reported" ? "active" : "")">
+            <i class="bi bi-flag me-1"></i>Reported (@ViewBag.ReportedCount)
+        </a>
+        <a href="@Url.Action("Index", new { filter = "approved" })" class="filter-tab @(currentFilter == "approved" ? "active" : "")">
+            Approved (@ViewBag.ApprovedCount)
+        </a>
+        <a href="@Url.Action("Index", new { filter = "rejected" })" class="filter-tab @(currentFilter == "rejected" ? "active" : "")">
+            Rejected (@ViewBag.RejectedCount)
+        </a>
+    </div>
+    
+    <form action="@Url.Action("Index")" method="get" class="d-flex gap-2">
+        <input type="hidden" name="filter" value="@currentFilter" />
+        <input type="text" name="search" value="@currentSearch" class="form-control form-control-sm" 
+               placeholder="Search reviews..." style="width: 200px; border-radius: 20px;" />
+        <button type="submit" class="btn btn-sm btn-primary" style="border-radius: 20px;">
+            <i class="bi bi-search"></i>
+        </button>
+    </form>
+</div>
+
+<div class="review-table">
+    <table>
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAll" /></th>
+                <th>Reviewer</th>
+                <th>Product</th>
+                <th>Rating</th>
+                <th>Comment</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Any())
+            {
+                foreach (var review in Model)
+                {
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="reviewIds" value="@review.Id" class="review-checkbox" />
+                        </td>
+                        <td>
+                            <div class="reviewer-cell">
+                                <div class="reviewer-avatar">
+                                    @(review.User?.FullName?.Substring(0, 1).ToUpper() ?? "?")
+                                </div>
+                                <div>
+                                    <div style="font-weight: 500; font-size: 0.9rem;">@(review.User?.FullName ?? "Unknown")</div>
+                                    @if (review.IsVerifiedPurchase)
+                                    {
+                                        <small class="text-success"><i class="bi bi-patch-check-fill"></i> Verified</small>
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="product-cell">
+                                @if (review.Product?.Images?.Any() == true)
+                                {
+                                    <img src="@review.Product.Images.First().Url" alt="" />
+                                }
+                                <span style="font-size: 0.85rem;">
+                                    @(review.Product?.Title?.Length > 25 ? review.Product.Title.Substring(0, 25) + "..." : review.Product?.Title)
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="star-rating">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    @(i <= review.Rating ? "★" : "☆")
+                                }
+                            </span>
+                            @if (review.Product?.AverageRating < 2.5m)
+                            {
+                                <div class="mt-1">
+                                    <span class="badge bg-danger-subtle text-danger" style="font-size: 0.65rem;" title="Product avg rating is below 2.5★ threshold">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Low Quality Product
+                                    </span>
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            <div class="comment-preview" title="@review.Comment">
+                                @(review.Comment?.Length > 50 ? review.Comment.Substring(0, 50) + "..." : review.Comment)
+                            </div>
+                            @if (review.ReportCount > 0)
+                            {
+                                <span class="report-badge"><i class="bi bi-flag-fill"></i> @review.ReportCount reports</span>
+                            }
+                        </td>
+                        <td>
+                            @{
+                                var statusClass = review.Status switch
+                                {
+                                    "Approved" => "status-approved",
+                                    "Rejected" => "status-rejected",
+                                    _ => "status-pending"
+                                };
+                            }
+                            <span class="status-badge @statusClass">@review.Status</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">@review.ReviewDate.ToString("MMM d, yyyy")</small>
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                @if (review.Status != "Approved")
+                                {
+                                    <form asp-action="Approve" method="post" style="display:inline;">
+                                        <input type="hidden" name="id" value="@review.Id" />
+                                        <button type="submit" class="action-btn approve" title="Approve">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                }
+                                @if (review.Status != "Rejected")
+                                {
+                                    <form asp-action="Reject" method="post" style="display:inline;">
+                                        <input type="hidden" name="id" value="@review.Id" />
+                                        <button type="submit" class="action-btn reject" title="Reject">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                }
+                                <a href="@Url.Action("Details", new { id = review.Id })" class="action-btn view" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No reviews found</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if ((int)ViewBag.TotalPages > 1)
+{
+    <div class="d-flex justify-content-center gap-2 mt-4">
+        @for (int i = 1; i <= (int)ViewBag.TotalPages; i++)
+        {
+            <a href="@Url.Action("Index", new { filter = currentFilter, search = currentSearch, page = i })" 
+               class="btn btn-sm @(i == (int)ViewBag.CurrentPage ? "btn-primary" : "btn-outline-secondary")">@i</a>
+        }
+    </div>
+}
+
+<script>
+    document.getElementById('selectAll').addEventListener('change', function() {
+        document.querySelectorAll('.review-checkbox').forEach(cb => cb.checked = this.checked);
+    });
+</script>

@@ -1,8 +1,0 @@
-C:\Users\Minhajul Islam\Desktop\Sparkle Ecommerce\Sparkle.Api\Views\Home\Index.cshtml(717,6): error CS0103: The name 'media' does not exist in the current context [C:\Users\Minhajul Islam\Desktop\Sparkle Ecommerce\Sparkle.Api\Sparkle.Api.csproj]
-C:\Users\Minhajul Islam\Desktop\Sparkle Ecommerce\Sparkle.Api\Views\Home\Index.cshtml(735,6): error CS0103: The name 'media' does not exist in the current context [C:\Users\Minhajul Islam\Desktop\Sparkle Ecommerce\Sparkle.Api\Sparkle.Api.csproj]
-
-Build FAILED.
-    3 Warning(s)
-    2 Error(s)
-
-Time Elapsed 00:00:09.66

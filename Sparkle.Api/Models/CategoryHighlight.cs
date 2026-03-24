@@ -105,7 +105,7 @@ public static class CategoryHighlightProvider
         new()
         {
             Slug = "kitchen-small-appliances",
-            Title = "Kitchen & Small Appliances",
+            Title = "Kitchen Appliances",
             Description = "Smart kitchen tools for effortless cooking.",
             Icon = "bi-cup-hot",
             AccentClass = "text-danger",

@@ -121,4 +121,52 @@ public class SettingsService : ISettingsService
             .OrderBy(s => s.Key)
             .ToListAsync();
     }
+
+    /// <summary>
+    /// Batch fetch multiple settings in a single query for performance
+    /// </summary>
+    public async Task<Dictionary<string, string>> GetBatchAsync(string[] keys)
+    {
+        var result = new Dictionary<string, string>();
+        var keysToFetch = new List<string>();
+
+        // First, check cache for each key
+        foreach (var key in keys)
+        {
+            var cacheKey = CacheKeyPrefix + key;
+            var cachedValue = await _cache.GetStringAsync(cacheKey);
+            if (cachedValue != null)
+            {
+                result[key] = cachedValue;
+            }
+            else
+            {
+                keysToFetch.Add(key);
+            }
+        }
+
+        // If all were cached, return immediately
+        if (!keysToFetch.Any())
+        {
+            return result;
+        }
+
+        // Fetch remaining from database in one query
+        var settings = await _context.SiteSettings
+            .AsNoTracking()
+            .Where(s => keysToFetch.Contains(s.Key))
+            .ToListAsync();
+
+        // Cache and add to result
+        foreach (var setting in settings)
+        {
+            result[setting.Key] = setting.Value;
+            await _cache.SetStringAsync(CacheKeyPrefix + setting.Key, setting.Value, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+            });
+        }
+
+        return result;
+    }
 }

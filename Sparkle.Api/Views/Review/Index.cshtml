@@ -1,0 +1,72 @@
+@model List<Sparkle.Domain.Orders.OrderItem>
+@{
+    ViewData["Title"] = "My Reviews";
+    Layout = "~/Views/Shared/_ProfileLayout.cshtml";
+}
+
+<div class="tw-bg-white tw-rounded-xl tw-border tw-border-slate-100 tw-overflow-hidden">
+    <!-- Compact Header -->
+    <div class="tw-px-4 tw-py-3 tw-border-b tw-border-slate-50 tw-flex tw-justify-between tw-items-center">
+        <h6 class="tw-font-bold tw-text-slate-800 tw-text-sm tw-mb-0">
+            <i class="bi bi-star tw-mr-1.5 tw-text-orange-500"></i> Products to Review
+        </h6>
+        <span class="tw-bg-orange-50 tw-text-orange-600 tw-px-2 tw-py-0.5 tw-rounded tw-text-[10px] tw-font-bold">@Model.Count</span>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="tw-p-3">
+            <!-- Compact Info Banner -->
+            <div class="tw-bg-blue-50/50 tw-text-blue-700 tw-p-2.5 tw-rounded-lg tw-mb-3 tw-flex tw-items-center tw-gap-2 tw-text-xs">
+                <i class="bi bi-info-circle-fill"></i>
+                <span>Rate products to earn reward points!</span>
+            </div>
+
+            <div class="tw-divide-y tw-divide-slate-50 tw-max-h-[400px] tw-overflow-y-auto">
+                @foreach (var item in Model)
+                {
+                    <div class="tw-flex tw-items-center tw-gap-3 tw-py-3 hover:tw-bg-slate-50/50 tw-transition-colors tw-px-1 tw-rounded-lg tw-group">
+                        <!-- Small Image -->
+                        <div class="tw-w-12 tw-h-12 tw-rounded-lg tw-bg-slate-100 tw-flex-shrink-0 tw-overflow-hidden">
+                            @if (item.Product?.Images?.Any() == true)
+                            {
+                                <img src="@item.Product.Images.First().Url" alt="" class="tw-w-full tw-h-full tw-object-cover" />
+                            }
+                            else
+                            {
+                                <div class="tw-w-full tw-h-full tw-flex tw-items-center tw-justify-center tw-text-slate-300">
+                                    <i class="bi bi-box"></i>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Info -->
+                        <div class="tw-flex-1 tw-min-w-0">
+                            <h6 class="tw-font-bold tw-text-slate-800 tw-text-sm tw-mb-0.5 tw-truncate">@item.ProductName</h6>
+                            <div class="tw-text-[10px] tw-text-slate-400">
+                                <i class="bi bi-calendar3 tw-mr-0.5"></i>
+                                @(item.Order.DeliveredAt?.ToString("MMM d") ?? item.Order.OrderDate.ToString("MMM d"))
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <a href="@Url.Action("Create", new { productId = item.ProductId, orderItemId = item.Id })" 
+                           class="tw-bg-orange-500 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-bold hover:tw-bg-orange-600 tw-transition-all tw-flex tw-items-center tw-gap-1.5 tw-flex-shrink-0">
+                            <i class="bi bi-pencil"></i> Review
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="tw-text-center tw-py-12 tw-px-4">
+            <div class="tw-w-14 tw-h-14 tw-mx-auto tw-mb-3 tw-bg-slate-50 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-slate-300">
+                <i class="bi bi-star tw-text-2xl"></i>
+            </div>
+            <h6 class="tw-font-bold tw-text-slate-800 tw-text-sm tw-mb-1">No Reviews Pending</h6>
+            <p class="tw-text-xs tw-text-slate-400 tw-mb-0 tw-max-w-xs tw-mx-auto">After receiving orders, products will appear here for review.</p>
+        </div>
+    }
+</div>

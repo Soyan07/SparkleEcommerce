@@ -1,13 +1,27 @@
 @using Microsoft.AspNetCore.Identity
 @using Sparkle.Domain.Identity
+@using Sparkle.Api.Services
 @inject UserManager<ApplicationUser> UserManager
+@inject ISettingsService SettingsService
+@{
+    var lang = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
+    var isBangla = lang == "bn";
+    var isGuestMode = Context.Request.Cookies["GuestMode"] == "true";
+    var realUser = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
+    var isAuthenticated = realUser != null && !isGuestMode;
+    var currentUser = isAuthenticated ? realUser : null;
+    
+    // Dynamic Settings: Fetched once for the whole page (Head & Body)
+    var supportPhone = await SettingsService.GetValueAsync("SupportPhone", "16789");
+    var siteTitle = await SettingsService.GetValueAsync("SiteTitle", "Sparkle");
+}
 <!DOCTYPE html>
-<html lang="@(Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en")">
+<html lang="@(isBangla ? "bn" : "en")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Sparkle</title>
-    <link rel="icon" type="image/png" href="/images/logo.png" />
+    <title>@ViewData["Title"] - @siteTitle</title>
+    <link rel="icon" type="image/png" href="/images/favicon.png" />
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,20 +36,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/unified-card-design.css" asp-append-version="true" />
     <!-- Responsive Scaling for HD & 4K Displays -->
     <link rel="stylesheet" href="~/css/responsive-scaling.css" asp-append-version="true" />
+    <!-- AI Smart Search Styling -->
+    <link rel="stylesheet" href="~/css/smart-search.css" asp-append-version="true" />
 
     
-    <!-- Tailwind CSS (Configured to not conflict with Bootstrap) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            prefix: 'tw-',
-            corePlugins: {
-                preflight: false,
-            }
-        }
-    </script>
+    <!-- Tailwind Compiled CSS -->
+    <link rel="stylesheet" href="~/css/tailwind-compiled.css" asp-append-version="true" />
     
     <style>
         @@font-face {
@@ -79,7 +88,7 @@
             background: var(--sparkle-dark);
             color: white;
             font-size: 12px;
-            padding: 6px 0;
+            padding: 1px 0;
         }
         
         .top-bar a { color: white; text-decoration: none; transition: color 0.2s; }
@@ -88,8 +97,8 @@
         /* Main Navigation */
         .main-nav {
             background: linear-gradient(135deg, rgba(255, 106, 0, 0.95), rgba(255, 159, 28, 0.95));
-            padding: 12px 0;
-            box-shadow: 0 4px 20px rgba(255, 106, 0, 0.15);
+            padding: 8px 0; /* Reduced from 14px */
+            box-shadow: 0 4px 12px rgba(255, 106, 0, 0.12);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -110,151 +119,420 @@
         
         .sparkle-logo:hover { color: white; transform: scale(1.02); transition: transform 0.2s; }
         
-        /* Search Box */
+        /* Search Box - Professional Redesign */
         .search-wrapper {
             flex: 1;
-            max-width: 700px;
-            margin: 0 30px;
+            max-width: 800px;
+            margin: 0 40px 0 20px;
+            position: relative;
+            z-index: 1050;
         }
         
         .search-box {
             display: flex;
-            border-radius: 50px;
+            border-radius: 8px; /* Slightly sharper corners */
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* Softer, refined shadow */
+            border: 1px solid #e2e8f0;
             background: white;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            height: 46px; /* Taller for better visibility */
         }
 
         .search-box:focus-within {
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12); /* Lift effect */
+            border-color: var(--sparkle-primary);
             transform: translateY(-1px);
         }
         
         .category-dropdown {
-            background: #f8f9fa;
+            background-color: #f8fafc;
             border: none;
-            padding: 0 20px;
+            padding: 0 32px 0 16px;
             font-size: 13px;
-            color: #4b5563;
+            color: #475569;
             cursor: pointer;
-            border-right: 1px solid #e5e7eb;
+            border-right: 1px solid #e2e8f0;
             font-weight: 500;
+            appearance: none;
+            -webkit-appearance: none;
+            height: 100%;
+            outline: none;
+            transition: background 0.2s;
+            /* Custom Chevron */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+        }
+
+        .category-dropdown:hover {
+            background-color: #f1f5f9;
+            color: #1e293b;
         }
         
         .search-input {
             flex: 1;
             border: none;
-            padding: 12px 20px;
-            font-size: 14px;
+            padding: 0 20px;
+            font-size: 15px; /* Larger text for clarity */
+            color: #1e293b;
             outline: none;
+            font-weight: 400;
+        }
+        
+        .search-input::placeholder {
+            color: #94a3b8;
         }
         
         .search-btn {
-            background: var(--sparkle-dark);
+            background: var(--sparkle-secondary); /* Use secondary (orange) for high vis */
             color: white;
             border: none;
-            padding: 0 28px;
+            padding: 0 30px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .search-btn:hover { 
+            background: #f58400; /* Darker orange */
+        }
+        
+        /* Dropdown - Professional List View */
+        .search-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            width: 100%;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            z-index: 1051;
+            display: none;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            animation: dropdownFade 0.2s ease-out;
+        }
+        
+        @@keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .search-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .search-history-header .clear-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .search-history-header .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .search-history-list {
+            padding: 4px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .search-history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .search-history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-history-item:hover {
+            background: #f8fafc;
+        }
+
+        .search-history-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            color: #334155;
+            font-size: 14px;
+        }
+        
+        .search-history-icon {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .search-history-item:hover .search-history-content {
+            color: #0f172a;
+        }
+        
+        .history-remove-btn {
+            background: none;
+            border: none;
+            color: #cbd5e1;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
             font-size: 16px;
         }
         
-        .search-btn:hover { background: #0f172a; }
-        
-        /* Cart Badge */
-        .cart-icon, .settings-icon {
-            position: relative;
-            color: white;
-            font-size: 24px;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
+        .history-remove-btn:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
         }
 
-        .cart-icon:hover, .settings-icon:hover {
-            background: rgba(255,255,255,0.2);
-            transform: translateY(-2px);
-            color: white;
+        /* Minimal Search History Header */
+        .search-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px; /* Ultra compact padding */
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #ffffff;
+        }
+
+        .search-history-header i {
+            display: none; /* Hide the clock icon for minimalism */
+        }
+
+        .clear-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .clear-btn:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        /* Modern Search History Chips */
+        .search-history-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px; /* tighter gap */
+            padding: 8px 12px; /* reduced container padding */
+        }
+
+
+        .search-history-chip {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 3px 10px; /* Reduced vertical padding significantly */
+            border-radius: 20px;
+            font-size: 12px; /* slightly smaller font */
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+
+        }
+
+        .search-history-chip:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+
+        .search-history-chip i {
+            font-size: 14px;
+            color: #94a3b8;
+            border-radius: 50%;
+            padding: 2px;
+            transition: all 0.2s;
         }
         
+        .search-history-chip i:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Menu Icon Size Increase */
+        .settings-icon i {
+            font-size: 26px !important; /* Increased by ~10% (assuming base 24px) */
+        }
+        
+        /* Cart Icon Styling */
+        .cart-icon {
+            position: relative;
+            color: white;
+            font-size: 19px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .cart-icon:hover {
+            color: white;
+            transform: scale(1.1);
+        }
         .cart-badge {
             position: absolute;
             top: -5px;
-            right: -5px;
-            background: #ef4444;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            right: -8px;
+            background: #ffffff;
+            color: var(--sparkle-primary);
+            font-size: 11px;
+            font-weight: 700;
+            height: 18px;
+            min-width: 18px;
+            padding: 0 4px; /* Reduced padding */
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
-            font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            border: 2px solid white;
+            border-radius: 9px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            border: 1px solid rgba(0,0,0,0.05);
+            line-height: 0; /* Clear line-height for flex centering */
+            text-align: center;
+        }
+
+        /* Premium Dropdown Styling */
+        .profile-dropdown-menu {
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 4px;
+            min-width: 200px;
+            margin-top: 8px !important;
+            background-color: #ffffff;
         }
         
-        /* Real-time notification badge */
-        .notification-dot {
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-            animation: pulse 2s infinite;
-        }
-        
-        @@keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
-        }
-        
-        /* Header Actions Card */
-        .header-actions-card {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 8px 20px;
+        .profile-dropdown-menu .dropdown-item {
+            border-radius: 4px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
-            gap: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #475569;
+            transition: all 0.1s ease-in-out;
+            margin-bottom: 2px;
+        }
+        
+        .profile-dropdown-menu .dropdown-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .profile-dropdown-menu .dropdown-item i {
+            font-size: 16px;
+            color: #64748b;
+        }
+        
+        .profile-dropdown-menu .dropdown-item:hover {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        .profile-dropdown-menu .dropdown-item:hover i {
+            color: var(--sparkle-primary);
+        }
+        
+        .profile-dropdown-menu .dropdown-divider {
+            border-color: #e2e8f0;
+            margin: 4px 0;
+        }
+        
+        /* Logout Option Special Styling */
+        .profile-dropdown-menu .dropdown-item.logout-btn {
+            color: #dc2626;
+        }
+        .profile-dropdown-menu .dropdown-item.logout-btn i {
+            color: #ef4444;
+        }
+        .profile-dropdown-menu .dropdown-item.logout-btn:hover {
+            background-color: #fef2f2;
+            color: #b91c1c;
+        }
+        .profile-dropdown-menu .dropdown-item.logout-btn:hover i {
+            color: #dc2626;
+        }
+        
+        /* Hamburger Button Premium Style */
+        .settings-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .settings-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+        .settings-icon i {
+            font-size: 22px !important;
         }
 
     </style>
 </head>
 <body>
-@{
-    var lang = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
-    var isBangla = lang == "bn";
-    var currentUser = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
-}
     <!-- Top Utility Bar -->
     <div class="top-bar">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <a href="/profile/more" class="text-white text-decoration-none d-inline-flex align-items-center gap-1">
+                    <a href="/account-info/more" class="text-white text-decoration-none d-inline-flex align-items-center gap-1">
                         <i class="bi bi-translate"></i>
                         <span>@(isBangla ? "ভাষা: বাংলা" : "Language: English")</span>
                     </a>
-                    <span class="ms-4 d-inline-flex align-items-center gap-1"><i class="bi bi-headset"></i> @(isBangla ? "কাস্টমার সার্ভিস: ১৬৭৮৯" : "Customer Service: 16789")</span>
-                    <a href="/orders" class="ms-4 d-inline-flex align-items-center gap-1"><i class="bi bi-truck"></i> @(isBangla ? "অর্ডার ট্র্যাক করুন" : "Track Order")</a>
+                    <span class="ms-4 d-inline-flex align-items-center gap-1"><i class="bi bi-headset"></i> @(isBangla ? $"কাস্টমার সার্ভিস: {supportPhone}" : $"Customer Service: {supportPhone}")</span>
+                    @if (!User.IsInRole("Seller"))
+                    {
+                        <a href="/orders" class="ms-4 d-inline-flex align-items-center gap-1"><i class="bi bi-truck"></i> @(isBangla ? "অর্ডার ট্র্যাক করুন" : "Track Order")</a>
+                    }
                 </div>
                 <div>
-                    @if (User.Identity?.IsAuthenticated == true)
+                    @if (isAuthenticated)
                     {
                         @if (User.IsInRole("Seller"))
                         {
@@ -273,15 +551,15 @@
     <!-- Main Navigation -->
     <nav class="main-nav">
         <div class="container">
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center gap-4">
                 <!-- Logo -->
-                <a href="/" class="sparkle-logo d-flex align-items-center text-decoration-none">
-                    <img src="/images/logo.png" alt="Sparkle" style="height: 55px; width: auto;" />
+                <a href="/" class="sparkle-logo d-flex align-items-center text-decoration-none logo-card">
+                    <img src="~/images/logo.png" alt="Sparkle" style="height: 42px; width: auto; transform: translateY(-5px);" asp-append-version="true" />
                 </a>
 
                 <!-- Search Box -->
-                <div class="search-wrapper flex-grow-1">
-                    <form class="search-box d-flex w-100" method="get" action="/search">
+                <div class="search-wrapper flex-grow-1" style="margin: 0;">
+                    <form class="search-box d-flex w-100" style="height: 42px;" method="get" action="/search">
                         <select class="category-dropdown" name="category" onchange="if(this.value) window.location.href='/category/'+this.value">
                             <option value="">@(isBangla ? "সব ক্যাটাগরি" : "All Categories")</option>
                             <option value="electronics-gadgets">Electronics & Gadgets</option>
@@ -290,7 +568,7 @@
                             <option value="mobiles-tablets">Mobiles & Tablets</option>
                             <option value="laptops-computers">Laptops & Computers</option>
                             <option value="home-appliances">Home Appliances</option>
-                            <option value="kitchen-small-appliances">Kitchen & Small Appliances</option>
+                            <option value="kitchen-small-appliances">Kitchen Appliances</option>
                             <option value="beauty-personal-care">Beauty & Personal Care</option>
                             <option value="jewelry-accessories">Jewelry & Accessories</option>
                             <option value="groceries-essentials">Groceries & Essentials</option>
@@ -314,10 +592,11 @@
                             <i class="bi bi-search"></i>
                         </button>
                     </form>
+                    <div id="searchDropdown" class="search-dropdown"></div>
                 </div>
 
                 <!-- Right Section -->
-                <div class="d-flex align-items-center justify-content-end header-actions-card ms-auto">
+                <div class="d-flex align-items-center justify-content-end header-actions-card ms-auto gap-4">
                     <!-- Delivery Location -->
                     <a href="#" class="text-white text-decoration-none d-flex align-items-center gap-1">
                         <i class="bi bi-geo-alt fs-5"></i>
@@ -327,19 +606,19 @@
                         </div>
                     </a>
 
-                    @if (User.Identity?.IsAuthenticated == true)
+                    @if (isAuthenticated)
                     {
                         <!-- Account Info (View Only) -->
                         <div class="text-white d-flex align-items-center gap-1 cursor-default">
                              <i class="bi bi-person fs-5"></i>
                              <div class="d-flex flex-column" style="line-height: 1;">
-                                 <span class="fw-bold" style="font-size: 12px;">@(currentUser?.FullName ?? User.Identity.Name)</span>
+                                 <span class="fw-bold" style="font-size: 12px;">@(currentUser?.FullName ?? User.Identity?.Name ?? "User")</span>
                                  <span style="font-size: 10px; opacity: 0.8;">@(currentUser?.Email ?? "")</span>
                              </div>
                         </div>
                         
                     }
-                    else
+                    else if (!isGuestMode)
                     {
                          <a href="/auth/login" class="text-white text-decoration-none d-flex align-items-center gap-1">
                               <i class="bi bi-person fs-5"></i>
@@ -351,27 +630,27 @@
                     }
 
                     <!-- Cart (Moved Here) -->
+                    @if (!isGuestMode && !User.IsInRole("Seller")) {
                     <a href="/cart" class="cart-icon">
                         <i class="bi bi-cart3"></i>
                         <span class="cart-badge" id="cartCount">0</span>
                     </a>
+                    }
 
 
                     <!-- Settings (Hamburger) - Only for Authenticated Users -->
-                    @if (User.Identity?.IsAuthenticated == true)
+                    @if (isAuthenticated)
                     {
                         <div class="dropdown ms-auto">
                             <a href="#" class="settings-icon text-white text-decoration-none d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false" title="Menu">
                                 <i class="bi bi-list fs-4"></i>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person-circle"></i> @(isBangla ? "অ্যাকাউন্ট তথ্য" : "Account Info")</a></li>
-                                <li><a class="dropdown-item" href="/orders"><i class="bi bi-box-seam"></i> @(isBangla ? "অর্ডার তথ্য" : "Order Info")</a></li>
-                                <li><a class="dropdown-item" href="/profile/security"><i class="bi bi-gear"></i> @(isBangla ? "সেটিংস" : "Settings")</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end profile-dropdown-menu">
+                                <li><a class="dropdown-item" href="/account-info"><i class="bi bi-person-circle"></i> @(isBangla ? "অ্যাকাউন্ট তথ্য" : "Account Info")</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <form method="post" action="/auth/logout" class="d-inline">
-                                        <button type="submit" class="dropdown-item">
+                                    <form method="post" action="/auth/logout" class="d-inline w-100">
+                                        <button type="submit" class="dropdown-item logout-btn bg-transparent border-0 w-100 text-start">
                                             <i class="bi bi-box-arrow-right"></i> @(isBangla ? "সাইন আউট" : "Sign Out")
                                         </button>
                                     </form>
@@ -387,110 +666,99 @@
     <!-- Main Content -->
     <main role="main">
         <!-- Toast Notifications -->
+        <!-- Toast Notifications (Unified JS) -->
         @if (TempData["Success"] != null)
         {
-            <div class="position-fixed top-0 end-0 p-3" style="z-index: 11000;">
-                <div class="toast show align-items-center text-white bg-success border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    showToast("@TempData["Success"]", "success");
+                });
+            </script>
         }
-        
         @if (TempData["Error"] != null)
         {
-            <div class="position-fixed top-0 end-0 p-3" style="z-index: 11000;">
-                <div class="toast show align-items-center text-white bg-danger border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    showToast("@TempData["Error"]", "error");
+                });
+            </script>
         }
-        
         @if (TempData["Info"] != null)
         {
-            <div class="position-fixed top-0 end-0 p-3" style="z-index: 11000;">
-                <div class="toast show align-items-center text-white bg-info border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-info-circle me-2"></i>@TempData["Info"]
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    showToast("@TempData["Info"]", "info");
+                });
+            </script>
         }
         
         @RenderBody()
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white mt-5 py-4">
+    <footer class="bg-dark text-white py-5">
         <div class="container">
-            <div class="row">
-                <div class="col-md-3">
-                    <h5>@(isBangla ? "স্পার্কল সম্পর্কে জানুন" : "Get to Know Sparkle")</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="/about" class="text-white-50">@(isBangla ? "আমাদের সম্পর্কে" : "About Us")</a></li>
-                        <li><a href="/careers" class="text-white-50">@(isBangla ? "ক্যারিয়ার" : "Careers")</a></li>
-                        <li><a href="/sustainability" class="text-white-50">@(isBangla ? "টেকসই উদ্যোগ" : "Sustainability")</a></li>
+            <div class="row g-4">
+                <!-- Customer Service -->
+                <div class="col-6 col-md-3">
+                    <h6 class="fw-bold mb-3" style="color: #f57224;">Customer Service</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="/help" class="text-white-50 text-decoration-none">Help Center</a></li>
+                        <li class="mb-2"><a href="/orders" class="text-white-50 text-decoration-none">Track Order</a></li>
+                        <li class="mb-2"><a href="/returns" class="text-white-50 text-decoration-none">Returns & Refunds</a></li>
+                        <li><a href="/shipping" class="text-white-50 text-decoration-none">Shipping Info</a></li>
                     </ul>
                 </div>
-                <div class="col-md-3">
-                    <h5>@(isBangla ? "স্পার্কলের সাথে আয় করুন" : "Make Money with Sparkle")</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="/sell" class="text-white-50">@(isBangla ? "স্পার্কলে বিক্রি করুন" : "Sell on Sparkle")</a></li>
-                        <li><a href="/affiliate" class="text-white-50">@(isBangla ? "অ্যাফিলিয়েট হোন" : "Become an Affiliate")</a></li>
+                
+                <!-- About -->
+                <div class="col-6 col-md-3">
+                    <h6 class="fw-bold mb-3" style="color: #f57224;">About @siteTitle</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="/about" class="text-white-50 text-decoration-none">About Us</a></li>
+                        <li class="mb-2"><a href="/auth/register-seller" class="text-white-50 text-decoration-none">Become a Seller</a></li>
+                        <li class="mb-2"><a href="/privacy" class="text-white-50 text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-white-50 text-decoration-none">Terms & Conditions</a></li>
                     </ul>
                 </div>
-                <div class="col-md-3">
-                    <h5>@(isBangla ? "পেমেন্ট পদ্ধতি" : "Payment Methods")</h5>
-                    <ul class="list-unstyled">
-                        <li class="text-white-50">bKash | Nagad | Rocket</li>
-                        <li class="text-white-50">@(isBangla ? "ক্রেডিট/ডেবিট কার্ড" : "Credit/Debit Cards")</li>
-                        <li class="text-white-50">@(isBangla ? "ক্যাশ অন ডেলিভারি" : "Cash on Delivery")</li>
-                    </ul>
+                
+                <!-- Payment -->
+                <div class="col-6 col-md-3">
+                    <h6 class="fw-bold mb-3" style="color: #f57224;">Payment Methods</h6>
+                    <div class="small text-white-50">
+                        <p class="mb-2"><i class="bi bi-wallet2 me-2"></i>bKash • Nagad • Rocket</p>
+                        <p class="mb-2"><i class="bi bi-credit-card me-2"></i>Visa • Mastercard</p>
+                        <p class="mb-0"><i class="bi bi-cash-coin me-2"></i>Cash on Delivery</p>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <h5>@(isBangla ? "কাস্টমার সার্ভিস" : "Customer Service")</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="/help" class="text-white-50">@(isBangla ? "হেল্প সেন্টার" : "Help Center")</a></li>
-                        <li><a href="/returns" class="text-white-50">@(isBangla ? "রিটার্নস" : "Returns")</a></li>
-                        <li><a href="/shipping" class="text-white-50">@(isBangla ? "শিপিং তথ্য" : "Shipping Info")</a></li>
-                    </ul>
+                
+                <!-- Connect -->
+                <div class="col-6 col-md-3">
+                    <h6 class="fw-bold mb-3" style="color: #f57224;">Connect With Us</h6>
+                    <p class="text-white-50 small mb-2"><i class="bi bi-telephone me-2"></i>@supportPhone</p>
+                    <p class="text-white-50 small mb-3"><i class="bi bi-envelope me-2"></i>support@sparkle.com</p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white-50 fs-5"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="text-white-50 fs-5"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white-50 fs-5"><i class="bi bi-youtube"></i></a>
+                    </div>
                 </div>
             </div>
-            <hr class="bg-secondary">
-            <div class="text-center text-white-50">
-                @(isBangla ? "© ২০২৪ Sparkle.com | সর্বস্বত্ব সংরক্ষিত" : "© 2024 Sparkle.com | All Rights Reserved")
-            </div>
+            
+            <hr class="my-4" style="border-color: #444;">
+            <p class="text-center text-white-50 small mb-0">© 2025 @(siteTitle).com | All Rights Reserved</p>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
 
 
     
     <script>
-        // Auto-hide toast notifications after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            const toasts = document.querySelectorAll('.toast');
-            toasts.forEach(toast => {
-                setTimeout(() => {
-                    const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
-                    bsToast.hide();
-                }, 5000);
-            });
-        });
+        // Expose Authentication State
+        window.isAuthenticated = '@(isAuthenticated.ToString().ToLower())';
+
         
         // Load cart count
         fetch('/cart/count')
@@ -498,7 +766,9 @@
             .then(data => {
                 document.getElementById('cartCount').textContent = data.count;
             })
-            .catch(err => console.error('Failed to load cart count', err));
+            .catch(err => {});
+
+
 
         // Initialize SignalR connections
         const inventoryConnection = new signalR.HubConnectionBuilder()
@@ -517,7 +787,6 @@
 
         // Listen for stock updates
         inventoryConnection.on("ReceiveStockUpdate", (data) => {
-            console.log('Stock Update:', data);
             // Update UI with real-time stock changes
             const stockElement = document.querySelector(`[data-product-id="${data.productId}"] .stock-level`);
             if (stockElement) {
@@ -535,41 +804,119 @@
         });
 
         // Show toast notification
-        function showNotification(title, message, type) {
+        function showToast(message, type = 'success', title = '') {
             const toast = document.createElement('div');
-            toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
-            toast.style.zIndex = '9999';
-            toast.innerHTML = `<strong>${title}</strong><br>${message}`;
+            
+            // Map types to colors
+            let bgColor = 'bg-dark';
+            let icon = 'info-circle';
+            
+            if (type === 'success') {
+                bgColor = 'bg-success';
+                icon = 'check-circle';
+            } else if (type === 'error' || type === 'danger') {
+                bgColor = 'bg-danger';
+                icon = 'x-circle';
+            } else if (type === 'warning') {
+                bgColor = 'bg-warning text-dark';
+                icon = 'exclamation-triangle';
+            } else if (type === 'info') {
+                bgColor = 'bg-info';
+                icon = 'info-circle';
+            }
+
+            // Minimal Styles
+            toast.className = `position-fixed top-0 end-0 m-4 p-2 px-3 rounded-pill shadow-lg d-flex align-items-center gap-2 text-white ${bgColor}`;
+            toast.style.zIndex = '12000';
+            toast.style.fontSize = '13px';
+            toast.style.fontWeight = '500';
+            toast.style.minWidth = '200px';
+            toast.style.maxWidth = '350px';
+            toast.style.width = 'fit-content';
+            toast.style.transform = 'translateY(0)';
+            toast.style.transition = 'all 0.3s ease';
+            toast.style.opacity = '0';
+            toast.style.animation = 'slideInToast 0.3s forwards';
+
+            // Add animation keyframes if not exists
+            if (!document.getElementById('toast-style')) {
+                const style = document.createElement('style');
+                style.id = 'toast-style';
+                style.innerHTML = `
+                    @@keyframes slideInToast {
+                        from { transform: translateY(-20px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                    @@keyframes fadeOutToast {
+                        from { opacity: 1; }
+                        to { opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // Minimal Content Structure
+            toast.innerHTML = `
+                <i class="bi bi-${icon} fs-6"></i>
+                <span class="text-truncate" style="max-width: 250px;">${message}</span>
+            `;
+
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 5000);
+
+            // Auto Remove (3 Seconds)
+            setTimeout(() => {
+                toast.style.animation = 'fadeOutToast 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
-        // Update cart count from backend for authenticated users, fallback to localStorage for guests
+        // Backward compatibility for SignalR
+        function showNotification(title, message, type) {
+            showToast(message, type, title);
+        }
+
+        // Update cart count from backend (Unified for Guest & Auth)
         function updateCartCount() {
             const badge = document.getElementById('cartCount');
             if (!badge) return;
 
-            if (window.isAuthenticated === 'true') {
-                fetch('/cart/count')
-                    .then(response => response.ok ? response.json() : { count: 0 })
-                    .then(data => {
-                        const count = (data && typeof data.count === 'number') ? data.count : 0;
-                        badge.textContent = count > 99 ? '99+' : count;
-                    })
-                    .catch(() => {
-                        badge.textContent = '0';
-                    });
-            } else {
-                // Get existing cart from localStorage
-                const cart = JSON.parse(localStorage.getItem('sparkle-cart') || '[]');
-                const count = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-                badge.textContent = count > 99 ? '99+' : count;
-            }
+            fetch('/cart/count')
+                .then(response => response.ok ? response.json() : { count: 0 })
+                .then(data => {
+                    const count = (data && typeof data.count === 'number') ? data.count : 0;
+                    badge.textContent = count > 99 ? '99+' : count;
+                })
+                .catch(() => {
+                    badge.textContent = '0';
+                });
         }
         
         updateCartCount();
         window.addEventListener('storage', updateCartCount);
     </script>
+
+    <script src="~/js/search.js" asp-append-version="true"></script>
+    <script src="~/js/smart-search.js" asp-append-version="true"></script>
+
+    @if (isGuestMode)
+    {
+        <div class="position-fixed bottom-0 end-0 m-4 p-3 bg-white rounded-3 shadow-lg border border-warning d-flex align-items-center gap-3" style="z-index: 9999; max-width: 300px; animation: slideIn 0.3s ease-out;">
+            <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 40px; height: 40px;">
+                <i class="bi bi-shop fs-5"></i>
+            </div>
+            <div>
+                <div class="fw-bold small text-dark">Viewing as Guest</div>
+                <div class="small text-muted mb-1" style="font-size: 11px;">You are currently browsing anonymously.</div>
+                <a href="/Seller/Dashboard/ExitGuestView" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">Return to Dashboard</a>
+            </div>
+        </div>
+        <style>
+            @@keyframes slideIn {
+                from { transform: translateY(100%); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        </style>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

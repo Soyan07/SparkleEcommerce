@@ -68,6 +68,7 @@ public class UserAddress : BaseEntity
     public string? Landmark { get; set; }
     
     public bool IsDefault { get; set; }
+    public bool IsDefaultBilling { get; set; }
     public bool IsActive { get; set; } = true;
 }
 

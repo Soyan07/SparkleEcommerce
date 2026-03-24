@@ -2,141 +2,428 @@
 @{
     var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
     var isBangla = langCookie == "bn";
-    ViewData["Title"] = (isBangla ? "অর্ডার বিস্তারিত #" : "Order Details #") + Model.Id;
+    ViewData["Title"] = (isBangla ? "অর্ডার বিস্তারিত #" : "Order Details #") + Model.OrderNumber;
+    Layout = "~/Views/Shared/_ProfileLayout.cshtml";
 }
 
-<div class="container my-4">
-    <div class="mb-4">
-        <a href="/orders" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> @(isBangla ? "অর্ডার লিস্টে ফিরে যান" : "Back to Orders")
+<style>
+    :root {
+        --primary: #f97316;
+        --primary-light: #fff7ed;
+        --slate-50: #f8fafc;
+        --slate-100: #f1f5f9;
+        --slate-200: #e2e8f0;
+        --slate-400: #94a3b8;
+        --slate-500: #64748b;
+        --slate-800: #1e293b;
+        --slate-900: #0f172a;
+    }
+
+    .details-container {
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Cards */
+    .modern-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        border: 1px solid var(--slate-100);
+        margin-bottom: 24px;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .card-header-clean {
+        padding: 24px;
+        border-bottom: 1px solid var(--slate-100);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .card-header-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--slate-800);
+        margin: 0;
+    }
+
+    .card-body-clean {
+        padding: 24px;
+    }
+
+    /* Product List */
+    .product-list-item {
+        display: flex;
+        align-items: center;
+        padding: 20px 0;
+        border-bottom: 1px dashed var(--slate-200);
+    }
+    .product-list-item:last-child {
+        border-bottom: none;
+    }
+    
+    .product-thumb {
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: var(--slate-50);
+        border: 1px solid var(--slate-200);
+    }
+    
+    /* Order Summary Side */
+    .summary-label {
+        color: var(--slate-500);
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 4px;
+    }
+    .summary-value {
+        color: var(--slate-900);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    
+    /* Status Badges */
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 16px;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+    .status-pending { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+    .status-processing { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .status-shipped { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+    .status-delivered { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .status-cancelled { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    /* Timeline */
+    .order-tracker {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+        margin: 30px 10px;
+    }
+    .order-tracker::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--slate-200);
+        z-index: 0;
+    }
+    .tracker-step {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        background: white;
+        padding: 0 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .step-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid var(--slate-200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--slate-400);
+        transition: all 0.3s ease;
+    }
+    .step-dot.active {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+    .step-dot.completed {
+        border-color: #10b981;
+        background: #10b981;
+        color: white;
+    }
+    .step-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--slate-500);
+    }
+    .step-label.active {
+        color: var(--slate-900);
+    }
+
+    /* Price Table */
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        color: var(--slate-500);
+        font-size: 0.9rem;
+    }
+    .price-row-total {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 2px dashed var(--slate-200);
+        color: var(--slate-900);
+        font-weight: 800;
+        font-size: 1.25rem;
+    }
+
+    /* Back Button */
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--slate-500);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+    .btn-back:hover {
+        background: var(--slate-100);
+        color: var(--slate-900);
+    }
+</style>
+
+<div class="details-container">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <a href="/orders" class="btn-back">
+            <i class="bi bi-arrow-left"></i> @(isBangla ? "অর্ডারে ফিরে যান" : "Back to Orders")
         </a>
+        <div class="text-end">
+            @if (Model.PaymentStatus == Sparkle.Domain.Orders.PaymentStatus.Paid || Model.Status == Sparkle.Domain.Orders.OrderStatus.Delivered)
+            {
+                <a href="/Profile/Invoices/Download/@Model.Id" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    <i class="bi bi-download me-1"></i> @(isBangla ? "ইনভয়েস" : "Invoice")
+                </a>
+            }
+        </div>
     </div>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-receipt"></i>
-                        @(isBangla ? "অর্ডার আইটেম" : "Order Items")
-                    </h5>
-                </div>
-                <div class="card-body">
-                    @foreach (var item in Model.Items)
+    <!-- Status Tracker -->
+    <div class="modern-card mb-4" style="background: linear-gradient(to right, #ffffff, #fff7ed);">
+        <div class="card-body-clean">
+            @{
+                var steps = new[] { "Pending", "Confirmed", "Processing", "Shipped", "Delivered" };
+                var currentStatusIndex = steps.ToList().IndexOf(Model.Status.ToString());
+                if (Model.Status == Sparkle.Domain.Orders.OrderStatus.Cancelled) currentStatusIndex = -1; // Handle differently if needed
+            }
+            @if (Model.Status != Sparkle.Domain.Orders.OrderStatus.Cancelled)
+            {
+                <div class="order-tracker">
+                    @for (int i = 0; i < steps.Length; i++)
                     {
-                        <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">@item.ProductTitle</h6>
-                                <p class="text-muted mb-1 small">
-                                    @(isBangla ? "দাম:" : "Price:") ৳ @item.UnitPrice.ToString("N0") × @item.Quantity
-                                </p>
+                        var status = steps[i];
+                        var isCompleted = i < currentStatusIndex || Model.Status == Sparkle.Domain.Orders.OrderStatus.Delivered;
+                        var isActive = i == currentStatusIndex;
+                        
+                        <div class="tracker-step">
+                            <div class="step-dot @(isCompleted ? "completed" : "") @(isActive ? "active" : "")">
+                                @if (isCompleted) { <i class="bi bi-check-lg"></i> }
+                                else if (isActive) { <i class="bi bi-circle-fill" style="font-size: 8px;"></i> }
+                                else { <i class="bi bi-circle" style="font-size: 8px;"></i> }
                             </div>
-                            <div class="text-end">
-                                <strong class="text-success">৳ @item.TotalPrice.ToString("N0")</strong>
-                            </div>
+                            <div class="step-label @(isActive ? "active" : "")">@status</div>
                         </div>
                     }
                 </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-info-circle"></i>
-                        @(isBangla ? "অর্ডার তথ্য" : "Order Information")
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted">@(isBangla ? "অর্ডার নং" : "Order ID")</small>
-                        <h6>#@Model.Id</h6>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">@(isBangla ? "তারিখ" : "Date")</small>
-                        <h6>@Model.CreatedAt.ToString("dd MMMM yyyy, hh:mm tt")</h6>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">@(isBangla ? "স্ট্যাটাস" : "Status")</small>
-                        <h6>
-                            <span class="badge bg-@(Model.Status switch {
-                                Sparkle.Domain.Orders.OrderStatus.Pending => "warning",
-                                Sparkle.Domain.Orders.OrderStatus.Processing => "info",
-                                Sparkle.Domain.Orders.OrderStatus.Shipped => "primary",
-                                Sparkle.Domain.Orders.OrderStatus.Delivered => "success",
-                                Sparkle.Domain.Orders.OrderStatus.Cancelled => "danger",
-                                _ => "secondary"
-                            })">
-                                @Model.Status.ToString()
-                            </span>
-                        </h6>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">@(isBangla ? "পেমেন্ট" : "Payment")</small>
-                        <h6>
-                            <span class="badge bg-@(Model.PaymentStatus == Sparkle.Domain.Orders.PaymentStatus.Paid ? "success" : "warning")">
-                                @Model.PaymentStatus.ToString()
-                            </span>
-                        </h6>
-                    </div>
-                </div>
-            </div>
-
-            @if (!string.IsNullOrEmpty(Model.ShippingFullName))
+            }
+            else
             {
-                <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">
-                            <i class="bi bi-geo-alt"></i>
-                            @(isBangla ? "ডেলিভারি ঠিকানা" : "Delivery Address")
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="mb-1"><strong>@Model.ShippingFullName</strong></p>
-                        <p class="mb-1">@Model.ShippingPhone</p>
-                        <p class="mb-1">@Model.ShippingAddressLine1</p>
-                        <p class="mb-1">@Model.ShippingArea, @Model.ShippingCity</p>
-                        <p class="mb-0">@Model.ShippingPostalCode</p>
+                <div class="text-center py-3 text-danger fw-bold">
+                    <i class="bi bi-x-circle me-2"></i> This order has been cancelled.
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            
+            <!-- Seller Info -->
+            @if (Model.Seller != null)
+            {
+                <div class="modern-card">
+                    <div class="card-body-clean d-flex align-items-center gap-4">
+                        <div style="width: 56px; height: 56px; border-radius: 12px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                            <i class="bi bi-shop"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted small mb-0 font-weight-bold text-uppercase" style="letter-spacing: 0.5px;">@(isBangla ? "বিক্রেতা" : "Sold By")</p>
+                            <h5 class="mb-0 fw-bold text-dark">@Model.Seller.ShopName</h5>
+                            <button class="btn btn-link text-decoration-none p-0 small mt-1" style="font-size: 0.8rem;">
+                                Visit Store <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div class="ms-auto d-none d-md-block">
+                            <button class="btn btn-outline-primary rounded-pill px-4 btn-sm fw-bold">Contact Seller</button>
+                        </div>
                     </div>
                 </div>
             }
 
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-calculator"></i>
-                        @(isBangla ? "মোট হিসাব" : "Order Summary")
-                    </h5>
+            <!-- Items -->
+            <div class="modern-card">
+                <div class="card-header-clean">
+                    <div class="card-header-icon">
+                        <i class="bi bi-bag"></i>
+                    </div>
+                    <span class="card-title">@(isBangla ? "অর্ডার আইটেম" : "Order Items") <span class="text-muted fw-normal ms-2 small">(@Model.OrderItems.Count items)</span></span>
                 </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>@(isBangla ? "সাবটোটাল" : "Subtotal")</span>
-                        <strong>৳ @Model.SubTotal.ToString("N0")</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>@(isBangla ? "ডেলিভারি চার্জ" : "Delivery")</span>
-                        <strong>৳ @Model.ShippingCost.ToString("N0")</strong>
-                    </div>
-                    @if (Model.DiscountAmount > 0)
+                <div class="card-body-clean pt-0">
+                    @foreach (var item in Model.OrderItems)
                     {
-                        <div class="d-flex justify-content-between mb-2 text-success">
-                            <span>@(isBangla ? "ডিসকাউন্ট" : "Discount")</span>
-                            <strong>-৳ @Model.DiscountAmount.ToString("N0")</strong>
+                        <div class="product-list-item">
+                            <img src="@(!string.IsNullOrEmpty(item.ProductImage) ? item.ProductImage : (item.Product?.Images?.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url ?? "https://placehold.co/100"))" alt="@item.ProductName" class="product-thumb me-4" />
+                            
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 text-dark fw-bold" style="line-height: 1.4;">@item.ProductName</h6>
+                                @if (!string.IsNullOrEmpty(item.VariantName))
+                                {
+                                    <div class="text-muted small mb-2">
+                                        Variant: @item.VariantName
+                                    </div>
+                                }
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark border">Qty: @item.Quantity</span>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end ms-3">
+                                <div class="fw-bold text-dark fs-5">৳@item.TotalPrice.ToString("N0")</div>
+                                <div class="text-muted small">৳@item.UnitPrice.ToString("N0") / unit</div>
+                            </div>
                         </div>
                     }
-                    <hr>
-                    <div class="d-flex justify-content-between">
-                        <h5>@(isBangla ? "মোট" : "Total")</h5>
-                        <h5 class="text-success">৳ @Model.TotalAmount.ToString("N0")</h5>
-                    </div>
                 </div>
             </div>
 
-            <div class="mt-3">
-                <a href="/orders/track/@Model.Id" class="btn btn-primary w-100">
-                    <i class="bi bi-truck"></i> @(isBangla ? "অর্ডার ট্র্যাক করুন" : "Track Order")
-                </a>
+            <!-- Shipping Details -->
+            <div class="modern-card">
+                <div class="card-header-clean">
+                    <div class="card-header-icon" style="background: #eff6ff; color: #3b82f6;">
+                        <i class="bi bi-geo-alt"></i>
+                    </div>
+                    <span class="card-title">@(isBangla ? "শিপিং ঠিকানা" : "Shipping Address")</span>
+                </div>
+                <div class="card-body-clean">
+                    <div class="row">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label class="summary-label">Full Name</label>
+                            <div class="summary-value">@Model.ShippingFullName</div>
+                        </div>
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label class="summary-label">Phone</label>
+                            <div class="summary-value">@Model.ShippingPhone</div>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <label class="summary-label">Address</label>
+                            <div class="summary-value line-height-lg">
+                                @Model.ShippingAddressLine1<br />
+                                @Model.ShippingCity - @Model.ShippingPostalCode<br />
+                                @Model.ShippingCountry
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Summary -->
+        <div class="col-lg-4">
+            <div class="modern-card position-sticky" style="top: 24px;">
+                <div class="card-header-clean bg-light">
+                    <i class="bi bi-receipt text-muted fs-4"></i>
+                    <span class="card-title">@(isBangla ? "সারাংশ" : "Order Summary")</span>
+                </div>
+                <div class="card-body-clean">
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="summary-label">@(isBangla ? "অর্ডার আইডি" : "Order ID")</div>
+                            <div class="summary-value text-primary font-monospace">#@Model.OrderNumber</div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <div class="summary-label">@(isBangla ? "তারিখ" : "Date")</div>
+                            <div class="summary-value">@Model.OrderDate.ToString("dd MMM yyyy")</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="summary-label">Payment</div>
+                            <span class="badge @(Model.PaymentStatus == Sparkle.Domain.Orders.PaymentStatus.Paid ? "bg-success" : "bg-warning text-dark")">
+                                @Model.PaymentStatus
+                            </span>
+                        </div>
+                        <div class="col-6 text-end">
+                            <div class="summary-label">Status</div>
+                             @{
+                                var statusClass = Model.Status.ToString() switch {
+                                    "Pending" => "status-pending",
+                                    "Confirmed" => "status-processing",
+                                    "Processing" => "status-processing",
+                                    "Shipped" => "status-shipped",
+                                    "Delivered" => "status-delivered",
+                                    "Cancelled" => "status-cancelled",
+                                    _ => "status-pending"
+                                };
+                            }
+                            <span class="status-pill @statusClass">@Model.Status</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-3">
+                        <div class="price-row">
+                            <span>Subtotal</span>
+                            <span>৳@Model.SubTotal.ToString("N0")</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Delivery Fee</span>
+                            <span>৳@Model.ShippingCost.ToString("N0")</span>
+                        </div>
+                        @if (Model.DiscountAmount > 0)
+                        {
+                            <div class="price-row text-success">
+                                <span>Discount</span>
+                                <span>-৳@Model.DiscountAmount.ToString("N0")</span>
+                            </div>
+                        }
+                        <div class="price-row-total">
+                            <span>Total</span>
+                            <span class="text-primary">৳@Model.TotalAmount.ToString("N0")</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-light p-3 text-center border-top">
+                    <small class="text-muted"><i class="bi bi-shield-check me-1"></i> Secure Payment</small>
+                </div>
             </div>
         </div>
     </div>

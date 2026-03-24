@@ -56,8 +56,9 @@
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1100px;
+            max-width: min(900px, 95vw);
             animation: slideUp 0.5s ease-out;
+            margin: auto;
         }
 
         @@keyframes slideUp {
@@ -72,26 +73,26 @@
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
             overflow: hidden; 
             display: grid; 
-            grid-template-columns: 400px 1fr;
-            max-width: 1050px;
+            grid-template-columns: 340px 1fr;
+            height: 683px;
+            max-width: 850px;
             margin: 0 auto;
         }
 
-        /* Left Side */
+        /* Left Side - Clean Minimal Design */
         .register-left { 
             background: linear-gradient(135deg, #0f766e 0%, #115e59 100%); 
-            padding: 3rem; 
+            padding: 2.5rem; 
             color: white; 
             display: flex; 
             flex-direction: column; 
-            position: relative;
             justify-content: space-between;
+            border-radius: 20px 0 0 20px;
         }
 
         .brand-logo {
             display: flex;
             align-items: center;
-            margin-bottom: 2rem;
             background: rgba(255, 255, 255, 0.1);
             padding: 0.5rem 1rem;
             border-radius: 8px;
@@ -100,7 +101,7 @@
         }
         
         .brand-logo img {
-            height: 42px; /* Increased size */
+            height: 40px;
             width: auto;
         }
 
@@ -109,73 +110,77 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            margin-top: -2rem;
+            flex: 1;
+            justify-content: center;
+            padding: 1.5rem 0;
         }
 
         .user-icon-circle {
             width: 100px;
             height: 100px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 2rem;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.25);
         }
 
         .user-icon-circle img {
-            width: 65px;
-            height: 65px;
+            width: 60px;
+            height: 60px;
             object-fit: contain;
         }
 
         .register-left h1 { 
-            font-size: 2.5rem; 
+            font-size: 2.2rem; 
             font-weight: 700; 
             line-height: 1.2;
             margin-bottom: 0.5rem; 
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
         }
 
         .register-left p.subtitle { 
-            font-size: 1rem; 
+            font-size: 0.95rem; 
             opacity: 0.9; 
             margin-bottom: 0;
-            font-weight: 400;
         }
 
         .features-box {
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1.25rem;
             border: 1px solid rgba(255, 255, 255, 0.15);
-            margin-top: 2rem;
         }
 
         .feature-item {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            margin-bottom: 0.75rem;
+            padding: 0.5rem 0;
             font-size: 0.9rem;
-            font-weight: 500;
         }
 
-        .feature-item:last-child { margin-bottom: 0; }
-        .feature-item i { font-size: 1.1rem; color: white; }
+        .feature-item:last-child { 
+            padding-bottom: 0; 
+        }
+
+        .feature-item i { 
+            font-size: 1rem; 
+            opacity: 0.9;
+        }
 
         /* Right Side */
         .register-right { 
-            padding: 2rem 3rem; 
+            padding: 3rem 1.25rem 2rem 1.25rem; /* Reduced padding to make inputs wider */
             display: flex;
             flex-direction: column;
             background: #fff;
-            overflow-y: auto;
-            max-height: 85vh;
+            border-radius: 0 20px 20px 0;
+            overflow-y: auto; /* Enable vertical scroll */
+            height: 100%; /* Fill container height */
         }
 
         /* Custom Scrollbar */
@@ -292,6 +297,13 @@
             font-weight: 400;
         }
 
+        /* Hide browser's built-in password reveal icon */
+        input::-ms-reveal,
+        input::-ms-clear,
+        input::-webkit-credentials-auto-fill-button {
+            display: none !important;
+        }
+
         /* Option styling for better dropdown appearance */
         .form-select option {
             padding: 0.5rem;
@@ -301,6 +313,150 @@
         .form-select option:first-child {
             color: #94a3b8;
             font-weight: 400;
+        }
+
+        /* Enhanced Address Dropdown Styles - 7 items visible with smooth scroll */
+        .address-dropdown-wrapper {
+            position: relative;
+        }
+
+        .address-dropdown {
+            position: relative;
+            width: 100%;
+        }
+
+        .address-dropdown-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .address-dropdown-trigger:hover:not(.disabled) {
+            border-color: #94a3b8;
+            background-color: #f8fafc;
+        }
+
+        .address-dropdown-trigger.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+        }
+
+        .address-dropdown-trigger.disabled {
+            background-color: #f1f5f9;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .address-dropdown-trigger .addr-placeholder {
+            color: #94a3b8;
+            font-weight: 400;
+            background: transparent !important;
+            display: inline-block;
+            visibility: visible;
+        }
+
+        .address-dropdown-trigger span {
+            color: var(--text-dark);
+            background: transparent !important;
+        }
+
+        .address-dropdown-trigger .arrow {
+            transition: transform 0.2s ease;
+        }
+
+        .address-dropdown-trigger.active .arrow {
+            transform: rotate(180deg);
+        }
+
+        .address-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            max-height: calc(7 * 42px + 12px); /* 7 items × item height + padding */
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: none;
+            padding: 6px 0;
+            scroll-behavior: smooth;
+        }
+
+        .address-dropdown-menu.open {
+            display: block;
+            animation: dropdownSlide 0.15s ease-out;
+        }
+
+        @@keyframes dropdownSlide {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .address-dropdown-item {
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .address-dropdown-item:hover {
+            background-color: #f0fdfa;
+            color: var(--primary-color);
+        }
+
+        .address-dropdown-item.selected {
+            background-color: #f0fdfa;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Custom Scrollbar for dropdown */
+        .address-dropdown-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .address-dropdown-menu::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .address-dropdown-menu::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .address-dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Responsive adjustments */
+        @@media (max-width: 768px) {
+            .address-dropdown-menu {
+                max-height: calc(7 * 40px + 12px);
+            }
+            .address-dropdown-item {
+                padding: 9px 14px;
+                font-size: 0.85rem;
+            }
         }
 
 
@@ -324,10 +480,36 @@
         .password-toggle:hover { color: var(--text-dark); }
 
         .helper-text {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-light);
-            margin-top: 0.25rem;
-            display: block;
+            margin-top: 0.15rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .strength-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: none;
+        }
+        .strength-badge.weak {
+            display: inline;
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .strength-badge.medium {
+            display: inline;
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .strength-badge.strong {
+            display: inline;
+            background: #d1fae5;
+            color: #059669;
         }
 
         .btn-primary { 
@@ -439,16 +621,17 @@
                 </div>
 
                 <form method="post" asp-action="RegisterSeller" asp-controller="Auth" id="sellerRegisterForm">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                     <input asp-for="Address" type="hidden" id="SellerAddressHidden" />
 
                     <div class="form-group">
-                        <label asp-for="FullName" class="form-label">Full Name / Owner</label>
+                        <label asp-for="FullName" class="form-label">Full Name / Owner <span class="text-danger">*</span></label>
                         <input asp-for="FullName" type="text" class="form-control" placeholder="Enter full name" autofocus />
                         <span asp-validation-for="FullName" class="text-danger small"></span>
                     </div>
 
                     <div class="form-group">
-                        <label asp-for="Email" class="form-label">Email Address</label>
+                        <label asp-for="Email" class="form-label">Email Address <span class="text-danger">*</span></label>
                         <input asp-for="Email" type="email" class="form-control" placeholder="Business email" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
@@ -456,16 +639,16 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="BusinessName" class="form-label">Business Name</label>
+                                <label asp-for="BusinessName" class="form-label">Business Name <span class="text-danger">*</span></label>
                                 <input asp-for="BusinessName" type="text" class="form-control" placeholder="Sparkle Fashion" />
                                 <span asp-validation-for="BusinessName" class="text-danger small"></span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="BusinessCategory" class="form-label">Category</label>
-                                <select asp-for="BusinessCategory" id="BusinessCategorySelect" class="form-select" required>
-                                    <option value="" selected disabled>Select Shop Category</option>
+                                <label asp-for="BusinessCategory" class="form-label">Shop Category <span class="text-danger">*</span></label>
+                                <select asp-for="BusinessCategory" id="BusinessCategorySelectV2" class="form-select" required>
+                                    <option value="" selected disabled>Select Shop Type</option>
                                     <option value="General Store">General Store</option>
                                     <option value="Grocery Store">Grocery Store</option>
                                     <option value="Super Shop">Super Shop</option>
@@ -480,7 +663,7 @@
                                     <option value="Automotive Shop">Automotive Shop</option>
                                     <option value="Others">Others</option>
                                 </select>
-                                <span asp-validation-for="BusinessCategory" class="text-danger small"></span>
+                                <span id="shopTypeError" class="text-danger small" style="display:none;">Shop Category is required</span>
                             </div>
                         </div>
                     </div>
@@ -488,8 +671,8 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="ContactPhone" class="form-label">Business Phone</label>
-                                <input asp-for="ContactPhone" type="tel" class="form-control" placeholder="+880 01790 410607" />
+                                <label asp-for="ContactPhone" class="form-label">Business Phone <span class="text-danger">*</span></label>
+                                <input asp-for="ContactPhone" type="tel" class="form-control" placeholder="+880 1XXXXXXXXX" />
                                 <span asp-validation-for="ContactPhone" class="text-danger small"></span>
                             </div>
                         </div>
@@ -509,25 +692,31 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Business Address (Bangladesh)</label>
+                        <label class="form-label">Business Address (Bangladesh) <span class="text-danger">*</span></label>
                         <div class="row g-2">
                             <div class="col-md-6">
-                                <select class="form-select" id="SellerDivisionSelect" required>
-                                    <option value="">Select Division</option>
-                                    <option value="Dhaka">Dhaka</option>
-                                    <option value="Chattogram">Chattogram</option>
-                                    <option value="Khulna">Khulna</option>
-                                    <option value="Rajshahi">Rajshahi</option>
-                                    <option value="Barishal">Barishal</option>
-                                    <option value="Sylhet">Sylhet</option>
-                                    <option value="Rangpur">Rangpur</option>
-                                    <option value="Mymensingh">Mymensingh</option>
-                                </select>
+                                <!-- Custom Division Dropdown -->
+                                <div class="address-dropdown" id="divisionDropdown">
+                                    <input type="hidden" id="SellerDivisionSelect" name="division" />
+                                    <div class="address-dropdown-trigger" id="divisionTrigger">
+                                        <span class="addr-placeholder">Select Division</span>
+                                        <i class="bi bi-chevron-down arrow"></i>
+                                    </div>
+                                    <div class="address-dropdown-menu" id="divisionMenu"></div>
+                                </div>
+                                <span id="divisionError" class="text-danger small" style="display:none;">Division is required</span>
                             </div>
                             <div class="col-md-6">
-                                <select class="form-select" id="SellerDistrictSelect" required disabled>
-                                    <option value="">Select District / City</option>
-                                </select>
+                                <!-- Custom District Dropdown -->
+                                <div class="address-dropdown" id="districtDropdown">
+                                    <input type="hidden" id="SellerDistrictSelect" name="district" />
+                                    <div class="address-dropdown-trigger disabled" id="districtTrigger">
+                                        <span class="addr-placeholder">Select District / City</span>
+                                        <i class="bi bi-chevron-down arrow"></i>
+                                    </div>
+                                    <div class="address-dropdown-menu" id="districtMenu"></div>
+                                </div>
+                                <span id="districtError" class="text-danger small" style="display:none;">District is required</span>
                             </div>
                         </div>
                     </div>
@@ -535,50 +724,61 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Upazila / Thana</label>
-                                <select class="form-select" id="SellerUpazilaSelect" required disabled>
-                                    <option value="">Select Upazila</option>
-                                </select>
+                                <label class="form-label">Upazila / Thana <span class="text-danger">*</span></label>
+                                <!-- Custom Thana Dropdown -->
+                                <div class="address-dropdown" id="thanaDropdown">
+                                    <input type="hidden" id="SellerThanaSelect" name="thana" />
+                                    <div class="address-dropdown-trigger disabled" id="thanaTrigger">
+                                        <span class="addr-placeholder">Select Thana</span>
+                                        <i class="bi bi-chevron-down arrow"></i>
+                                    </div>
+                                    <div class="address-dropdown-menu" id="thanaMenu"></div>
+                                </div>
+                                <span id="thanaError" class="text-danger small" style="display:none;">Thana is required</span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Village / Area</label>
-                                <input type="text" class="form-control" id="SellerAreaInput" placeholder="Area" required />
+                                <label class="form-label">Village / Area <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="SellerAreaInput" placeholder="Area / Locality" />
+                                <span id="areaError" class="text-danger small" style="display:none;">Area is required</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Detailed Shop Address</label>
-                        <textarea class="form-control" rows="2" id="SellerStreetDetails" placeholder="Shop number, road, market" required style="resize: none;"></textarea>
+                        <textarea class="form-control" rows="2" id="SellerStreetDetails" placeholder="Shop number, road, market" style="resize: none;"></textarea>
                         <small class="helper-text">Include floor, stall, and nearby landmark for logistics team.</small>
                         <span id="SellerAddressError" class="text-danger small" style="display:none;"></span>
                     </div>
 
                     <div class="form-group">
-                        <label asp-for="Password" class="form-label">Password</label>
+                        <label asp-for="Password" class="form-label">Password <span class="text-danger">*</span></label>
                         <div class="password-wrapper">
                             <input asp-for="Password" type="password" class="form-control" id="password" placeholder="Create a strong password" />
                             <i class="bi bi-eye password-toggle" id="togglePassword"></i>
                         </div>
-                        <small class="helper-text">Use at least 6 characters</small>
+                        <small class="helper-text">
+                            <span>Use 6+ characters with letters &amp; numbers</span>
+                            <span class="strength-badge" id="passwordStrength"></span>
+                        </small>
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
 
                     <div class="form-group">
-                        <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                        <label asp-for="ConfirmPassword" class="form-label">Confirm Password <span class="text-danger">*</span></label>
                         <div class="password-wrapper">
-                            <input asp-for="ConfirmPassword" type="password" class="form-control" id="confirmPassword" placeholder="Re-enter your password" />
+                            <input asp-for="ConfirmPassword" type="password" class="form-control" id="confirmPassword" placeholder="Re-enter your password" data-val-required="Confirm Password is required" />
                             <i class="bi bi-eye password-toggle" id="toggleConfirmPassword"></i>
                         </div>
-                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        <span id="confirmPasswordError" class="text-danger small" style="display:none;">Confirm Password is required</span>
                     </div>
 
                     <button type="submit" class="btn-primary">@(isBangla ? "আবেদন জমা দিন" : "Submit Application")</button>
 
                     <div class="bottom-links">
-                        @(isBangla ? "আগেই অ্যাকাউন্ট আছে?" : "Already have an account?") <a href="/auth/login">@(isBangla ? "লগইন করুন" : "Login")</a><br>
+                        @(isBangla ? "আগেই অ্যাকাউন্ট আছে?" : "Already have an account?") <a href="/auth/login?type=seller">@(isBangla ? "লগইন করুন" : "Login")</a><br>
                         <a href="/auth/register">@(isBangla ? "কাস্টমার হিসেবে রেজিস্টার করুন" : "Register as Customer")</a>
                     </div>
                 </form>
@@ -587,6 +787,9 @@
     </div>
 
     <style>
+        /* Modern Validation Styles */
+
+
         /* Custom Select Styles */
         .custom-select-wrapper {
             position: relative;
@@ -705,6 +908,41 @@
         setupPasswordToggle('#togglePassword', '#password');
         setupPasswordToggle('#toggleConfirmPassword', '#confirmPassword');
 
+        // Password Strength Checker
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 6) strength++;
+            if (password.length >= 8) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            return strength;
+        }
+
+        const passwordInput = document.getElementById('password');
+        const strengthBadge = document.getElementById('passwordStrength');
+        
+        if (passwordInput && strengthBadge) {
+            passwordInput.addEventListener('input', function() {
+                const strength = checkPasswordStrength(this.value);
+                strengthBadge.className = 'strength-badge';
+                strengthBadge.textContent = '';
+                
+                if (this.value.length > 0) {
+                    if (strength <= 2) {
+                        strengthBadge.classList.add('weak');
+                        strengthBadge.textContent = 'Weak';
+                    } else if (strength <= 3) {
+                        strengthBadge.classList.add('medium');
+                        strengthBadge.textContent = 'Medium';
+                    } else {
+                        strengthBadge.classList.add('strong');
+                        strengthBadge.textContent = 'Strong';
+                    }
+                }
+            });
+        }
+
         // Custom Dropdown Logic
         function initCustomDropdown(selectId) {
             const select = document.getElementById(selectId);
@@ -782,163 +1020,356 @@
 
         // Initialize Custom Dropdown for Category
         document.addEventListener('DOMContentLoaded', () => {
-             initCustomDropdown('BusinessCategorySelect');
+             initCustomDropdown('BusinessCategorySelectV2');
         });
 
-        // Address dropdown logic (mirrors user registration experience)
+        // Custom Address Dropdown Logic - Division → District → Thana
         (function () {
-            const divisionSelect = document.getElementById('SellerDivisionSelect');
-            const districtSelect = document.getElementById('SellerDistrictSelect');
-            const upazilaSelect = document.getElementById('SellerUpazilaSelect');
+            // DOM Elements
+            const divisionInput = document.getElementById('SellerDivisionSelect');
+            const districtInput = document.getElementById('SellerDistrictSelect');
+            const thanaInput = document.getElementById('SellerThanaSelect');
+            const divisionTrigger = document.getElementById('divisionTrigger');
+            const districtTrigger = document.getElementById('districtTrigger');
+            const thanaTrigger = document.getElementById('thanaTrigger');
+            const divisionMenu = document.getElementById('divisionMenu');
+            const districtMenu = document.getElementById('districtMenu');
+            const thanaMenu = document.getElementById('thanaMenu');
             const areaInput = document.getElementById('SellerAreaInput');
             const streetDetails = document.getElementById('SellerStreetDetails');
             const addressHidden = document.getElementById('SellerAddressHidden');
             const addressError = document.getElementById('SellerAddressError');
             const form = document.getElementById('sellerRegisterForm');
 
-            if (!divisionSelect || !districtSelect || !upazilaSelect || !streetDetails || !areaInput || !addressHidden || !form) {
-                console.error('Seller address dropdown elements not found');
+            if (!divisionInput || !districtInput || !thanaInput || !form) {
+                console.error('Custom address dropdown elements not found');
                 return;
             }
 
+            // Division → District → Thana data (COMPLETE data with all upazilas)
             const locationData = {
-                Barisal: {
-                    Barguna: ["Amtali", "Bamna", "Barguna Sadar", "Betagi", "Patharghata", "Taltali"],
-                    Barisal: ["Agailjhara", "Babuganj", "Bakerganj", "Banaripara", "Gaurnadi", "Hizla", "Barisal Sadar", "Mehendiganj", "Muladi", "Wazirpur"],
-                    Bhola: ["Bhola Sadar", "Borhanuddin", "Char Fasson", "Daulatkhan", "Lalmohan", "Manpura", "Tazumuddin"],
-                    Jhalokati: ["Jhalokati Sadar", "Kathalia", "Nalchity", "Rajapur"],
-                    Patuakhali: ["Bauphal", "Dashmina", "Dumki", "Galachipa", "Kalapara", "Mirzaganj", "Patuakhali Sadar", "Rangabali"],
-                    Pirojpur: ["Bhandaria", "Kawkhali", "Mathbaria", "Nazirpur", "Nesarabad (Swarupkathi)", "Pirojpur Sadar", "Zianagar"]
-                },
-                Chittagong: {
-                    Bandarban: ["Ali Kadam", "Bandarban Sadar", "Lama", "Naikhongchhari", "Rowangchhari", "Ruma", "Thanchi"],
-                    Brahmanbaria: ["Akhaura", "Ashuganj", "Bancharampur", "Bijoynagar", "Brahmanbaria Sadar", "Kasba", "Nabinagar", "Nasirnagar", "Sarail"],
-                    Chandpur: ["Chandpur Sadar", "Faridganj", "Haimchar", "Haziganj", "Kachua", "Matlab Dakshin", "Matlab Uttar", "Shahrasti"],
-                    Chittagong: ["Anwara", "Banshkhali", "Boalkhali", "Chandanaish", "Fatikchhari", "Hathazari", "Lohagara", "Mirsharai", "Patiya", "Rangunia", "Raozan", "Sandwip", "Satkania", "Sitakunda"],
-                    Comilla: ["Barura", "Brahmanpara", "Burichong", "Chandina", "Chauddagram", "Comilla Adarsha Sadar", "Comilla Sadar Dakshin", "Daudkandi", "Debidwar", "Homna", "Laksham", "Manoharganj", "Meghna", "Monohorgonj", "Muradnagar", "Nangalkot", "Titas"],
-                    "Cox's Bazar": ["Chakaria", "Cox's Bazar Sadar", "Kutubdia", "Maheshkhali", "Pekua", "Ramu", "Teknaf", "Ukhiya"],
-                    Feni: ["Chhagalnaiya", "Daganbhuiyan", "Feni Sadar", "Fulgazi", "Parshuram", "Sonagazi"],
-                    Khagrachhari: ["Dighinala", "Khagrachhari Sadar", "Lakshmichhari", "Mahalchhari", "Manikchhari", "Matiranga", "Panchhari", "Ramgarh"],
-                    Lakshmipur: ["Komolnagar", "Lakshmipur Sadar", "Ramganj", "Ramgati", "Raipur"],
-                    Noakhali: ["Begumganj", "Chatkhil", "Companiganj", "Hatiya", "Kabirhat", "Noakhali Sadar", "Senbagh", "Subarnachar", "Sonaimuri"],
-                    Rangamati: ["Baghaichhari", "Barkal", "Kawkhali (Betbunia)", "Belaichhari", "Juraichhari", "Kaptai", "Langadu", "Naniarchar", "Rajasthali", "Rangamati Sadar"]
-                },
                 Dhaka: {
-                    Dhaka: ["Dhamrai", "Dohar", "Keraniganj", "Nawabganj", "Savar"],
-                    Faridpur: ["Alfadanga", "Bhanga", "Boalmari", "Charbhadrasan", "Faridpur Sadar", "Madhukhali", "Nagarkanda", "Sadarpur", "Saltha"],
-                    Gazipur: ["Gazipur Sadar", "Kaliakair", "Kaliganj", "Kapasia", "Sreepur"],
-                    Gopalganj: ["Gopalganj Sadar", "Kasiani", "Kotalipara", "Muksudpur", "Tungipara"],
-                    Kishoreganj: ["Austagram", "Bajitpur", "Bhairab", "Hossainpur", "Itna", "Karimganj", "Katiadi", "Kishoreganj Sadar", "Kuliarchar", "Mithamain", "Nikli", "Pakundia", "Tarail"],
-                    Madaripur: ["Kalkini", "Madaripur Sadar", "Rajoir", "Shibchar"],
-                    Manikganj: ["Daulatpur", "Ghior", "Harirampur", "Manikganj Sadar", "Saturia", "Shibalaya", "Singair"],
-                    Munshiganj: ["Gazaria", "Lohajang", "Munshiganj Sadar", "Sirajdikhan", "Sreenagar", "Tongibari"],
-                    Narayanganj: ["Araihazar", "Bandar", "Narayanganj Sadar", "Rupganj", "Sonargaon"],
-                    Narsingdi: ["Belabo", "Monohardi", "Narsingdi Sadar", "Palash", "Raipura", "Shibpur"],
-                    Rajbari: ["Baliakandi", "Goalandaghat", "Kalukhali", "Pangsha", "Rajbari Sadar"],
-                    Shariatpur: ["Bhedarganj", "Damudya", "Gosairhat", "Naria", "Shariatpur Sadar", "Zajira"],
-                    Tangail: ["Basail", "Bhuapur", "Delduar", "Dhanbari", "Ghatail", "Gopalpur", "Kalihati", "Madhupur", "Mirzapur", "Nagarpur", "Sakhipur", "Tangail Sadar"]
+                    "Dhaka": ["Dhamrai", "Dohar", "Keraniganj", "Nawabganj", "Savar", "Tejgaon", "Mirpur", "Mohammadpur", "Dhanmondi", "Gulshan", "Uttara", "Motijheel", "Ramna", "Shahbag", "Wari", "Sutrapur"],
+                    "Gazipur": ["Gazipur Sadar", "Kaliakair", "Kaliganj", "Kapasia", "Sreepur", "Tongi"],
+                    "Narayanganj": ["Araihazar", "Bandar", "Narayanganj Sadar", "Rupganj", "Sonargaon", "Fatullah", "Siddhirganj"],
+                    "Narsingdi": ["Belabo", "Monohardi", "Narsingdi Sadar", "Palash", "Raipura", "Shibpur"],
+                    "Tangail": ["Basail", "Bhuapur", "Delduar", "Dhanbari", "Ghatail", "Gopalpur", "Kalihati", "Madhupur", "Mirzapur", "Nagarpur", "Sakhipur", "Tangail Sadar"],
+                    "Kishoreganj": ["Austagram", "Bajitpur", "Bhairab", "Hossainpur", "Itna", "Karimganj", "Katiadi", "Kishoreganj Sadar", "Kuliarchar", "Mithamain", "Nikli", "Pakundia", "Tarail"],
+                    "Manikganj": ["Daulatpur", "Ghior", "Harirampur", "Manikganj Sadar", "Saturia", "Shibalaya", "Singair"],
+                    "Munshiganj": ["Gazaria", "Lohajang", "Munshiganj Sadar", "Sirajdikhan", "Sreenagar", "Tongibari"],
+                    "Faridpur": ["Alfadanga", "Bhanga", "Boalmari", "Charbhadrasan", "Faridpur Sadar", "Madhukhali", "Nagarkanda", "Sadarpur", "Saltha"],
+                    "Gopalganj": ["Gopalganj Sadar", "Kashiani", "Kotalipara", "Muksudpur", "Tungipara"],
+                    "Madaripur": ["Kalkini", "Madaripur Sadar", "Rajoir", "Shibchar"],
+                    "Shariatpur": ["Bhedarganj", "Damudya", "Gosairhat", "Naria", "Shariatpur Sadar", "Zajira"],
+                    "Rajbari": ["Baliakandi", "Goalandaghat", "Kalukhali", "Pangsha", "Rajbari Sadar"]
                 },
-                Khulna: {
-                    Bagerhat: ["Bagerhat Sadar", "Chitalmari", "Fakirhat", "Kachua", "Mollahat", "Mongla", "Morrelganj", "Rampal", "Sarankhola"],
-                    Chuadanga: ["Alamdanga", "Chuadanga Sadar", "Damurhuda", "Jibannagar"],
-                    Jessore: ["Abhaynagar", "Bagherpara", "Chaugachha", "Jhikargachha", "Keshabpur", "Jessore Sadar", "Manirampur", "Sharsha"],
-                    Jhenaidah: ["Harinakunda", "Jhenaidah Sadar", "Kaliganj", "Kotchandpur", "Maheshpur", "Shailkupa"],
-                    Khulna: ["Batiaghata", "Dacope", "Dighalia", "Dumuria", "Koyra", "Phultala", "Rupsa", "Terokhada", "Paikgachha"],
-                    Kushtia: ["Bheramara", "Daulatpur", "Khoksa", "Kumarkhali", "Kushtia Sadar", "Mirpur"],
-                    Magura: ["Magura Sadar", "Mohammadpur", "Shalikha", "Sreepur"],
-                    Meherpur: ["Gangni", "Meherpur Sadar", "Mujibnagar"],
-                    Narail: ["Kalia", "Lohagara", "Narail Sadar"],
-                    Satkhira: ["Assasuni", "Debhata", "Kalaroa", "Kaliganj", "Satkhira Sadar", "Shyamnagar", "Tala"]
-                },
-                Mymensingh: {
-                    Jamalpur: ["Bakshiganj", "Dewanganj", "Islampur", "Jamalpur Sadar", "Madarganj", "Melandaha", "Sarishabari"],
-                    Mymensingh: ["Bhaluka", "Dhobaura", "Fulbaria", "Gaffargaon", "Gauripur", "Haluaghat", "Ishwarganj", "Mymensingh Sadar", "Muktagacha", "Nandail", "Phulpur", "Trishal"],
-                    Netrokona: ["Atpara", "Barhatta", "Durgapur", "Kendua", "Khaliajuri", "Madan", "Mohanganj", "Netrokona Sadar", "Purbadhala"],
-                    Sherpur: ["Jhenaigati", "Nakla", "Nalitabari", "Sherpur Sadar", "Sreebardi"]
+                Chattogram: {
+                    "Chattogram": ["Anwara", "Banshkhali", "Boalkhali", "Chandanaish", "Fatikchhari", "Hathazari", "Lohagara", "Mirsharai", "Patiya", "Rangunia", "Raozan", "Sandwip", "Satkania", "Sitakunda", "Kotwali", "Pahartali", "Double Mooring", "Panchlaish", "Bakalia"],
+                    "Cumilla": ["Barura", "Brahmanpara", "Burichong", "Chandina", "Chauddagram", "Comilla Adarsha Sadar", "Comilla Sadar Dakshin", "Daudkandi", "Debidwar", "Homna", "Laksham", "Manoharganj", "Meghna", "Muradnagar", "Nangalkot", "Titas"],
+                    "Brahmanbaria": ["Akhaura", "Ashuganj", "Bancharampur", "Bijoynagar", "Brahmanbaria Sadar", "Kasba", "Nabinagar", "Nasirnagar", "Sarail"],
+                    "Noakhali": ["Begumganj", "Chatkhil", "Companiganj", "Hatiya", "Kabirhat", "Noakhali Sadar", "Senbagh", "Subarnachar", "Sonaimuri"],
+                    "Feni": ["Chhagalnaiya", "Daganbhuiyan", "Feni Sadar", "Fulgazi", "Parshuram", "Sonagazi"],
+                    "Lakshmipur": ["Kamalnagar", "Lakshmipur Sadar", "Ramganj", "Ramgati", "Raipur"],
+                    "Chandpur": ["Chandpur Sadar", "Faridganj", "Haimchar", "Haziganj", "Kachua", "Matlab Dakshin", "Matlab Uttar", "Shahrasti"],
+                    "Cox's Bazar": ["Chakaria", "Cox's Bazar Sadar", "Kutubdia", "Maheshkhali", "Pekua", "Ramu", "Teknaf", "Ukhiya"],
+                    "Bandarban": ["Ali Kadam", "Bandarban Sadar", "Lama", "Naikhongchhari", "Rowangchhari", "Ruma", "Thanchi"],
+                    "Khagrachari": ["Dighinala", "Khagrachhari Sadar", "Lakshmichhari", "Mahalchhari", "Manikchhari", "Matiranga", "Panchhari", "Ramgarh"],
+                    "Rangamati": ["Baghaichhari", "Barkal", "Kawkhali", "Belaichhari", "Juraichhari", "Kaptai", "Langadu", "Naniarchar", "Rajasthali", "Rangamati Sadar"]
                 },
                 Rajshahi: {
-                    Bogura: ["Adamdighi", "Bogura Sadar", "Dhunat", "Dhupchanchia", "Gabtali", "Kahaloo", "Nandigram", "Sariakandi", "Shajahanpur", "Sherpur", "Shibganj", "Sonatala"],
-                    Joypurhat: ["Akkelpur", "Joypurhat Sadar", "Kalai", "Khetlal", "Panchbibi"],
-                    Naogaon: ["Atrai", "Badalgachhi", "Dhamoirhat", "Manda", "Mohadevpur", "Naogaon Sadar", "Niamatpur", "Patnitala", "Porsha", "Raninagar", "Sapahar"],
-                    Natore: ["Bagatipara", "Baraigram", "Gurudaspur", "Lalpur", "Naldanga", "Natore Sadar", "Singra"],
-                    Nawabganj: ["Bholahat", "Gomastapur", "Nachole", "Nawabganj Sadar", "Shibganj"],
-                    Pabna: ["Atgharia", "Bera", "Bhangura", "Chatmohar", "Faridpur", "Ishwardi", "Pabna Sadar", "Santhia", "Sujanagar"],
-                    Rajshahi: ["Bagha", "Bagmara", "Charghat", "Durgapur", "Godagari", "Mohanpur", "Paba", "Puthia", "Tanore"],
-                    Sirajganj: ["Belkuchi", "Chauhali", "Kamarkhanda", "Kazipur", "Raiganj", "Shahjadpur", "Sirajganj Sadar", "Tarash", "Ullapara"]
+                    "Rajshahi": ["Bagha", "Bagmara", "Charghat", "Durgapur", "Godagari", "Mohanpur", "Paba", "Puthia", "Tanore", "Boalia", "Rajpara", "Motihar", "Shah Makhdum"],
+                    "Pabna": ["Atgharia", "Bera", "Bhangura", "Chatmohar", "Faridpur", "Ishwardi", "Pabna Sadar", "Santhia", "Sujanagar"],
+                    "Sirajganj": ["Belkuchi", "Chauhali", "Kamarkhanda", "Kazipur", "Raiganj", "Shahjadpur", "Sirajganj Sadar", "Tarash", "Ullapara"],
+                    "Bogura": ["Adamdighi", "Bogura Sadar", "Dhunat", "Dhupchanchia", "Gabtali", "Kahaloo", "Nandigram", "Sariakandi", "Shajahanpur", "Sherpur", "Shibganj", "Sonatala"],
+                    "Naogaon": ["Atrai", "Badalgachhi", "Dhamoirhat", "Manda", "Mohadevpur", "Naogaon Sadar", "Niamatpur", "Patnitala", "Porsha", "Raninagar", "Sapahar"],
+                    "Natore": ["Bagatipara", "Baraigram", "Gurudaspur", "Lalpur", "Naldanga", "Natore Sadar", "Singra"],
+                    "Joypurhat": ["Akkelpur", "Joypurhat Sadar", "Kalai", "Khetlal", "Panchbibi"],
+                    "Chapainawabganj": ["Bholahat", "Gomastapur", "Nachole", "Nawabganj Sadar", "Shibganj"]
                 },
-                Rangpur: {
-                    Dinajpur: ["Birampur", "Birganj", "Biral", "Bochaganj", "Chirirbandar", "Dinajpur Sadar", "Ghoraghat", "Hakimpur", "Kaharole", "Khansama", "Nawabganj", "Parbatipur"],
-                    Gaibandha: ["Fulchhari", "Gaibandha Sadar", "Gobindaganj", "Palashbari", "Sadullapur", "Saghata", "Sundarganj"],
-                    Kurigram: ["Bhurungamari", "Char Rajibpur", "Chilmari", "Kurigram Sadar", "Nageshwari", "Phulbari", "Rajarhat", "Rowmari", "Ulipur"],
-                    Lalmonirhat: ["Aditmari", "Hatibandha", "Kaliganj", "Lalmonirhat Sadar", "Patgram"],
-                    Nilphamari: ["Dimla", "Domar", "Jaldhaka", "Kishoreganj", "Nilphamari Sadar", "Saidpur"],
-                    Panchagarh: ["Atwari", "Boda", "Debiganj", "Panchagarh Sadar", "Tetulia"],
-                    Rangpur: ["Badarganj", "Gangachara", "Kaunia", "Mithapukur", "Pirgachha", "Pirgacha", "Taraganj", "Rangpur Sadar"],
-                    Thakurgaon: ["Baliadangi", "Haripur", "Pirganj", "Ranisankail", "Thakurgaon Sadar"]
+                Khulna: {
+                    "Khulna": ["Batiaghata", "Dacope", "Dighalia", "Dumuria", "Koyra", "Paikgachha", "Phultala", "Rupsa", "Terokhada", "Sonadanga", "Khalishpur", "Daulatpur"],
+                    "Jessore": ["Abhaynagar", "Bagherpara", "Chaugachha", "Jhikargachha", "Keshabpur", "Jessore Sadar", "Manirampur", "Sharsha"],
+                    "Jhenaidah": ["Harinakunda", "Jhenaidah Sadar", "Kaliganj", "Kotchandpur", "Maheshpur", "Shailkupa"],
+                    "Magura": ["Magura Sadar", "Mohammadpur", "Shalikha", "Sreepur"],
+                    "Narail": ["Kalia", "Lohagara", "Narail Sadar"],
+                    "Bagerhat": ["Bagerhat Sadar", "Chitalmari", "Fakirhat", "Kachua", "Mollahat", "Mongla", "Morrelganj", "Rampal", "Sarankhola"],
+                    "Satkhira": ["Assasuni", "Debhata", "Kalaroa", "Kaliganj", "Satkhira Sadar", "Shyamnagar", "Tala"],
+                    "Meherpur": ["Gangni", "Meherpur Sadar", "Mujibnagar"],
+                    "Chuadanga": ["Alamdanga", "Chuadanga Sadar", "Damurhuda", "Jibannagar"],
+                    "Kushtia": ["Bheramara", "Daulatpur", "Khoksa", "Kumarkhali", "Kushtia Sadar", "Mirpur"]
+                },
+                Barishal: {
+                    "Barishal": ["Agailjhara", "Babuganj", "Bakerganj", "Banaripara", "Gaurnadi", "Hizla", "Barishal Sadar", "Mehendiganj", "Muladi", "Wazirpur"],
+                    "Bhola": ["Bhola Sadar", "Borhanuddin", "Char Fasson", "Daulatkhan", "Lalmohan", "Manpura", "Tazumuddin"],
+                    "Patuakhali": ["Bauphal", "Dashmina", "Dumki", "Galachipa", "Kalapara", "Mirzaganj", "Patuakhali Sadar", "Rangabali"],
+                    "Pirojpur": ["Bhandaria", "Kawkhali", "Mathbaria", "Nazirpur", "Nesarabad", "Pirojpur Sadar", "Zianagar"],
+                    "Barguna": ["Amtali", "Bamna", "Barguna Sadar", "Betagi", "Patharghata", "Taltali"],
+                    "Jhalokati": ["Jhalokati Sadar", "Kathalia", "Nalchity", "Rajapur"]
                 },
                 Sylhet: {
-                    Habiganj: ["Ajmiriganj", "Bahubal", "Baniachang", "Chunarughat", "Habiganj Sadar", "Lakhai", "Madhabpur", "Nabiganj", "Shaistaganj"],
-                    Moulvibazar: ["Barlekha", "Juri", "Kamalganj", "Kulaura", "Moulvibazar Sadar", "Rajnagar", "Sreemangal"],
-                    Sunamganj: ["Bishwamvarpur", "Chhatak", "Dharampasha", "Dowarabazar", "Jagannathpur", "Jamalganj", "Sulla", "Sunamganj Sadar", "Shanthiganj", "Tahirpur"],
-                    Sylhet: ["Balaganj", "Beanibazar", "Bishwanath", "Companiganj", "Dakshin Surma", "Fenchuganj", "Golapganj", "Gowainghat", "Jaintiapur", "Kanaighat", "Osmani Nagar", "Sylhet Sadar"]
+                    "Sylhet": ["Balaganj", "Beanibazar", "Bishwanath", "Companiganj", "Dakshin Surma", "Fenchuganj", "Golapganj", "Gowainghat", "Jaintiapur", "Kanaighat", "Osmani Nagar", "Sylhet Sadar", "Kotwali", "Shah Paran", "South Surma"],
+                    "Habiganj": ["Ajmiriganj", "Bahubal", "Baniachang", "Chunarughat", "Habiganj Sadar", "Lakhai", "Madhabpur", "Nabiganj", "Shaistaganj"],
+                    "Moulvibazar": ["Barlekha", "Juri", "Kamalganj", "Kulaura", "Moulvibazar Sadar", "Rajnagar", "Sreemangal"],
+                    "Sunamganj": ["Bishwamvarpur", "Chhatak", "Dharampasha", "Dowarabazar", "Jagannathpur", "Jamalganj", "Sulla", "Sunamganj Sadar", "Shanthiganj", "Tahirpur"]
+                },
+                Rangpur: {
+                    "Rangpur": ["Badarganj", "Gangachara", "Kaunia", "Mithapukur", "Pirgachha", "Pirganj", "Rangpur Sadar", "Taraganj"],
+                    "Dinajpur": ["Birampur", "Birganj", "Biral", "Bochaganj", "Chirirbandar", "Dinajpur Sadar", "Ghoraghat", "Hakimpur", "Kaharole", "Khansama", "Nawabganj", "Parbatipur"],
+                    "Thakurgaon": ["Baliadangi", "Haripur", "Pirganj", "Ranisankail", "Thakurgaon Sadar"],
+                    "Panchagarh": ["Atwari", "Boda", "Debiganj", "Panchagarh Sadar", "Tetulia"],
+                    "Nilphamari": ["Dimla", "Domar", "Jaldhaka", "Kishoreganj", "Nilphamari Sadar", "Saidpur"],
+                    "Lalmonirhat": ["Aditmari", "Hatibandha", "Kaliganj", "Lalmonirhat Sadar", "Patgram"],
+                    "Kurigram": ["Bhurungamari", "Char Rajibpur", "Chilmari", "Kurigram Sadar", "Nageshwari", "Phulbari", "Rajarhat", "Rowmari", "Ulipur"],
+                    "Gaibandha": ["Fulchhari", "Gaibandha Sadar", "Gobindaganj", "Palashbari", "Sadullapur", "Saghata", "Sundarganj"]
+                },
+                Mymensingh: {
+                    "Mymensingh": ["Bhaluka", "Dhobaura", "Fulbaria", "Gaffargaon", "Gauripur", "Haluaghat", "Ishwarganj", "Mymensingh Sadar", "Muktagacha", "Nandail", "Phulpur", "Trishal"],
+                    "Sherpur": ["Jhenaigati", "Nakla", "Nalitabari", "Sherpur Sadar", "Sreebardi"],
+                    "Netrokona": ["Atpara", "Barhatta", "Durgapur", "Kendua", "Khaliajuri", "Madan", "Mohanganj", "Netrokona Sadar", "Purbadhala"],
+                    "Jamalpur": ["Bakshiganj", "Dewanganj", "Islampur", "Jamalpur Sadar", "Madarganj", "Melandaha", "Sarishabari"]
                 }
             };
 
-            function populateDistricts(division) {
-                districtSelect.innerHTML = '<option value="">Select District / City</option>';
-                upazilaSelect.innerHTML = '<option value="">Select Upazila</option>';
-                const districts = locationData[division] ? Object.keys(locationData[division]) : [];
-                districts.forEach(d => {
-                    const option = document.createElement('option');
-                    option.value = d;
-                    option.textContent = d;
-                    districtSelect.appendChild(option);
+            const divisions = Object.keys(locationData);
+
+            // Utility: Populate dropdown menu
+            function populateMenu(menu, items, onSelect) {
+                menu.innerHTML = '';
+                items.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'address-dropdown-item';
+                    div.textContent = item;
+                    div.addEventListener('click', () => onSelect(item));
+                    menu.appendChild(div);
                 });
-                districtSelect.disabled = districts.length === 0;
-                upazilaSelect.disabled = true;
             }
 
-            function populateUpazilas(division, district) {
-                upazilaSelect.innerHTML = '<option value="">Select Upazila</option>';
-                const upazilas = locationData[division]?.[district] || [];
-                upazilas.forEach(u => {
-                    const option = document.createElement('option');
-                    option.value = u;
-                    option.textContent = u;
-                    upazilaSelect.appendChild(option);
-                });
-                upazilaSelect.disabled = upazilas.length === 0;
+            // Utility: Toggle dropdown
+            function toggleDropdown(trigger, menu, isOpen) {
+                if (isOpen) {
+                    trigger.classList.add('active');
+                    menu.classList.add('open');
+                } else {
+                    trigger.classList.remove('active');
+                    menu.classList.remove('open');
+                }
             }
 
-            divisionSelect.addEventListener('change', (e) => {
-                const selectedDivision = e.target.value;
-                populateDistricts(selectedDivision);
-                districtSelect.value = '';
-                upazilaSelect.value = '';
+            // Utility: Set dropdown value
+            function setDropdownValue(input, trigger, value, placeholderText) {
+                input.value = value;
+                const span = trigger.querySelector('span');
+                if (value) {
+                    span.textContent = value;
+                    span.classList.remove('addr-placeholder');
+                } else {
+                    span.textContent = placeholderText;
+                    span.classList.add('addr-placeholder');
+                }
+            }
+
+            // Utility: Enable/disable dropdown
+            function setDropdownEnabled(trigger, enabled) {
+                if (enabled) {
+                    trigger.classList.remove('disabled');
+                } else {
+                    trigger.classList.add('disabled');
+                }
+            }
+
+            // Populate division menu
+            populateMenu(divisionMenu, divisions, (division) => {
+                setDropdownValue(divisionInput, divisionTrigger, division, 'Select Division');
+                toggleDropdown(divisionTrigger, divisionMenu, false);
+                
+                // Reset and populate district
+                setDropdownValue(districtInput, districtTrigger, '', 'Select District / City');
+                setDropdownValue(thanaInput, thanaTrigger, '', 'Select Thana');
+                const districts = Object.keys(locationData[division] || {});
+                populateMenu(districtMenu, districts, (district) => {
+                    setDropdownValue(districtInput, districtTrigger, district, 'Select District / City');
+                    toggleDropdown(districtTrigger, districtMenu, false);
+                    
+                    // Reset and populate thana
+                    setDropdownValue(thanaInput, thanaTrigger, '', 'Select Thana');
+                    const thanas = locationData[division]?.[district] || [];
+                    populateMenu(thanaMenu, thanas, (thana) => {
+                        setDropdownValue(thanaInput, thanaTrigger, thana, 'Select Thana');
+                        toggleDropdown(thanaTrigger, thanaMenu, false);
+                    });
+                    setDropdownEnabled(thanaTrigger, thanas.length > 0);
+                });
+                setDropdownEnabled(districtTrigger, districts.length > 0);
+                setDropdownEnabled(thanaTrigger, false);
             });
 
-            districtSelect.addEventListener('change', (e) => {
-                const selectedDistrict = e.target.value;
-                populateUpazilas(divisionSelect.value, selectedDistrict);
-                upazilaSelect.value = '';
+            // Click handlers for triggers
+            divisionTrigger.addEventListener('click', () => {
+                if (!divisionTrigger.classList.contains('disabled')) {
+                    const isOpen = divisionMenu.classList.contains('open');
+                    closeAllDropdowns();
+                    toggleDropdown(divisionTrigger, divisionMenu, !isOpen);
+                }
             });
 
+            districtTrigger.addEventListener('click', () => {
+                if (!districtTrigger.classList.contains('disabled')) {
+                    const isOpen = districtMenu.classList.contains('open');
+                    closeAllDropdowns();
+                    toggleDropdown(districtTrigger, districtMenu, !isOpen);
+                }
+            });
+
+            thanaTrigger.addEventListener('click', () => {
+                if (!thanaTrigger.classList.contains('disabled')) {
+                    const isOpen = thanaMenu.classList.contains('open');
+                    closeAllDropdowns();
+                    toggleDropdown(thanaTrigger, thanaMenu, !isOpen);
+                }
+            });
+
+            // Close all dropdowns
+            function closeAllDropdowns() {
+                toggleDropdown(divisionTrigger, divisionMenu, false);
+                toggleDropdown(districtTrigger, districtMenu, false);
+                toggleDropdown(thanaTrigger, thanaMenu, false);
+            }
+
+            // Close dropdowns on outside click
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.address-dropdown')) {
+                    closeAllDropdowns();
+                }
+            });
+
+            // Form submit validation - Individual field errors
             form.addEventListener('submit', (e) => {
-                const division = divisionSelect.value;
-                const district = districtSelect.value;
-                const upazila = upazilaSelect.value;
+                const division = divisionInput.value;
+                const district = districtInput.value;
+                const thana = thanaInput.value;
                 const area = areaInput.value.trim();
                 const street = streetDetails.value.trim();
-                if (!division || !district || !upazila || area.length < 2 || street.length < 5) {
+                const shopType = document.getElementById('BusinessCategorySelectV2').value;
+
+                // Get individual error spans
+                const divisionError = document.getElementById('divisionError');
+                const districtError = document.getElementById('districtError');
+                const thanaError = document.getElementById('thanaError');
+                const areaError = document.getElementById('areaError');
+                const shopTypeError = document.getElementById('shopTypeError');
+
+                let hasError = false;
+
+                // Reset all errors
+                divisionError.style.display = 'none';
+                districtError.style.display = 'none';
+                thanaError.style.display = 'none';
+                areaError.style.display = 'none';
+                shopTypeError.style.display = 'none';
+
+                // Check each field individually
+                if (!division) {
+                    divisionError.style.display = 'block';
+                    hasError = true;
+                }
+                if (!district) {
+                    districtError.style.display = 'block';
+                    hasError = true;
+                }
+                if (!thana) {
+                    thanaError.style.display = 'block';
+                    hasError = true;
+                }
+                if (area.length < 2) {
+                    areaError.style.display = 'block';
+                    hasError = true;
+                }
+                if (!shopType) {
+                    shopTypeError.style.display = 'block';
+                    hasError = true;
+                }
+
+                // Password validation
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const confirmPasswordError = document.getElementById('confirmPasswordError');
+                confirmPasswordError.style.display = 'none';
+
+                if (!confirmPassword) {
+                    confirmPasswordError.textContent = 'Confirm Password is required';
+                    confirmPasswordError.style.display = 'block';
+                    hasError = true;
+                } else if (password !== confirmPassword) {
+                    confirmPasswordError.textContent = 'The Password and Confirm Password do not match.';
+                    confirmPasswordError.style.display = 'block';
+                    hasError = true;
+                }
+
+                if (hasError) {
                     e.preventDefault();
-                    addressError.style.display = 'block';
-                    addressError.textContent = 'Division, district, upazila, area, and detailed shop address are required (min 5 chars).';
                     return;
                 }
-                addressError.style.display = 'none';
-                addressHidden.value = `${division}, ${district}, ${upazila}, ${area} | ${street}`;
+
+                addressHidden.value = `${division}, ${district}, ${thana}, ${area} | ${street}`;
             });
         })();
+
+        // Phone Validation Logic (Same as Register User)
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('ContactPhone');
+            const emailInput = document.getElementById('Email');
+
+            if(phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let val = e.target.value.replace(/\D/g, ''); // Numbers only
+                    if (val.startsWith('1')) val = '0' + val;    // Auto-prefix 01
+                    if (val.length > 11) val = val.substring(0, 11); // Max 11
+                    e.target.value = val;
+                });
+
+                phoneInput.addEventListener('blur', function(e) {
+                    const val = e.target.value;
+                    const span = document.querySelector('span[data-valmsg-for="ContactPhone"]');
+                    if (val.length > 0) {
+                        if (!/^01\d{9}$/.test(val)) {
+                            if (span) {
+                                span.textContent = "Invalid phone (must be 01XXXXXXXXX)";
+                                span.className = "text-danger field-validation-error small";
+                            }
+                        } else {
+                            if (span && span.textContent.includes("Invalid phone")) {
+                                span.textContent = "";
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Email Logic
+            if(emailInput) {
+                emailInput.addEventListener('blur', function(e) {
+                    const val = e.target.value;
+                    const span = document.querySelector('span[data-valmsg-for="Email"]');
+                    const regex = /^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                    
+                    if (val.length > 0) {
+                        if (!regex.test(val)) {
+                            if (span) {
+                                span.textContent = "Invalid email address";
+                                span.className = "text-danger field-validation-error small";
+                            }
+                        } else {
+                            if (span && span.textContent === "Invalid email address") {
+                                span.textContent = "";
+                            }
+                        }
+                    }
+                });
+            }
+        });
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
 </body>
 </html>

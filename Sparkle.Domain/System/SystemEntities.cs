@@ -31,7 +31,7 @@ public class SupportTicket : BaseEntity
     public string? AssignedTo { get; set; }
     public DateTime? AssignedAt { get; set; }
     
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // CreatedAt inherited from BaseEntity
     public DateTime? FirstResponseAt { get; set; }
     public DateTime? ResolvedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
@@ -81,7 +81,7 @@ public class Notification : BaseEntity
     public bool IsRead { get; set; }
     public DateTime? ReadAt { get; set; }
     
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // CreatedAt inherited from BaseEntity
     public DateTime? ExpiresAt { get; set; }
     
     public string? RelatedEntityType { get; set; } // Order, Product, etc.

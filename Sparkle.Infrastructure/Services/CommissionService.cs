@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Sparkle.Domain.Financial;
+using Sparkle.Domain.Configuration;
+using Sparkle.Domain.Orders;
+using System.Text.Json;
+using Sparkle.Infrastructure;
+using Microsoft.Extensions.Logging;
 
 namespace Sparkle.Infrastructure.Services;
 
@@ -13,94 +17,115 @@ public interface ICommissionService
 public class CommissionService : ICommissionService
 {
     private readonly ApplicationDbContext _db;
-    private const decimal ADMIN_COMMISSION_RATE = 0.03m; // 3%
-    private const decimal SELLER_RATE = 0.97m; // 97%
+    private readonly IWalletService _walletService;
+    private readonly ILogger<CommissionService> _logger;
 
-    public CommissionService(ApplicationDbContext db)
+    public CommissionService(ApplicationDbContext db, IWalletService walletService, ILogger<CommissionService> logger)
     {
         _db = db;
+        _walletService = walletService;
+        _logger = logger;
     }
 
     public async Task ProcessOrderCommissionAsync(int orderId)
     {
-        var order = await _db.Orders
-            .Include(o => o.OrderItems)
-            .ThenInclude(i => i.ProductVariant)
-            .ThenInclude(pv => pv!.Product)
-            .FirstOrDefaultAsync(o => o.Id == orderId);
-
-        if (order == null)
-            throw new InvalidOperationException($"Order {orderId} not found");
-
-        // Check if commission already processed
-        var existingCommission = await _db.AdminCommissions
-            .AnyAsync(c => c.OrderId == orderId);
-
-        if (existingCommission)
-            return; // Already processed
-
-        // Group items by seller
-        var sellerGroups = order.OrderItems
-            .Where(i => i.ProductVariant != null)
-            .GroupBy(i => i.ProductVariant!.Product.SellerId);
-
-        foreach (var sellerGroup in sellerGroups)
+        try 
         {
-            var sellerId = sellerGroup.Key;
-            var sellerOrderTotal = sellerGroup.Sum(i => i.UnitPrice * i.Quantity);
+            var order = await _db.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(i => i.ProductVariant)
+                .ThenInclude(pv => pv!.Product)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
 
-            var commissionAmount = sellerOrderTotal * ADMIN_COMMISSION_RATE;
-            var sellerAmount = sellerOrderTotal * SELLER_RATE;
-
-            // Create seller earning record
-            var sellerEarning = new SellerEarning
+            if (order == null)
             {
-                SellerId = sellerId?.ToString() ?? string.Empty,
-                OrderId = orderId,
-                OrderAmount = sellerOrderTotal,
-                SellerAmount = sellerAmount,
-                CommissionAmount = commissionAmount,
-                CommissionRate = ADMIN_COMMISSION_RATE,
-                Status = Domain.Financial.PayoutStatus.Pending,
-                CreatedAt = DateTime.UtcNow
-            };
+                _logger.LogWarning("Commission processing: Order {OrderId} not found", orderId);
+                return;
+            }
 
-            _db.FinancialSellerEarnings.Add(sellerEarning);
+            var config = await _db.CommissionConfigs
+                .Where(c => c.IsActive && c.EffectiveFrom <= DateTime.UtcNow)
+                .OrderByDescending(c => c.EffectiveFrom)
+                .FirstOrDefaultAsync();
 
-            // Create admin commission record
-            var adminCommission = new AdminCommission
+            if (config == null)
             {
-                OrderId = orderId,
-                SellerId = sellerId?.ToString() ?? string.Empty,
-                OrderAmount = sellerOrderTotal,
-                CommissionAmount = commissionAmount,
-                CommissionRate = ADMIN_COMMISSION_RATE,
-                CreatedAt = DateTime.UtcNow
-            };
+                 _logger.LogInformation("No active CommissionConfig found. Using default 15%.");
+                 config = new CommissionConfig { GlobalRate = 15.0m };
+            }
 
-            _db.AdminCommissions.Add(adminCommission);
+            var sellerRates = JsonSerializer.Deserialize<Dictionary<string, decimal>>(config.SellerRates ?? "{}") ?? new();
+            var categoryRates = JsonSerializer.Deserialize<Dictionary<string, decimal>>(config.CategoryRates ?? "{}") ?? new();
+
+            var sellerGroups = order.OrderItems
+                .Where(i => i.ProductVariant != null && i.ProductVariant.Product != null)
+                .GroupBy(i => i.ProductVariant!.Product.SellerId);
+
+            foreach (var group in sellerGroups)
+            {
+                var sellerId = group.Key;
+                if (!sellerId.HasValue) continue;
+
+                decimal sellerTotal = group.Sum(i => i.TotalPrice);
+                decimal commissionRate = config.GlobalRate;
+
+                // Priority 1: Seller Override
+                if (sellerRates.TryGetValue(sellerId.Value.ToString(), out var sRate))
+                {
+                    commissionRate = sRate;
+                }
+                else 
+                {
+                    // Priority 2: Category Rate
+                    var categoryId = group.First().ProductVariant!.Product.CategoryId;
+                    if (categoryRates.TryGetValue(categoryId.ToString(), out var cRate))
+                    {
+                        commissionRate = cRate;
+                    }
+                }
+
+                decimal commissionAmount = Math.Round(sellerTotal * (commissionRate / 100m), 2);
+                decimal sellerNetEarning = sellerTotal - commissionAmount;
+
+                // UPDATE ORDER ITEMS
+                foreach (var item in group)
+                {
+                   // Pro-rate commission per item
+                   decimal itemRatio = item.TotalPrice / sellerTotal;
+                   decimal itemCommission = Math.Round(commissionAmount * itemRatio, 2);
+                   decimal itemEarning = item.TotalPrice - itemCommission;
+
+                   item.PlatformCommissionRate = commissionRate;
+                   item.PlatformCommissionAmount = itemCommission;
+                   item.SellerEarning = itemEarning;
+                }
+
+                await _walletService.AddPendingBalanceAsync(
+                    sellerId.Value, 
+                    sellerNetEarning, 
+                    commissionAmount, 
+                    orderId, 
+                    $"Commission ({commissionRate}%) from Order {order.OrderNumber}");
+            }
+            
+            await _db.SaveChangesAsync();
         }
-
-        await _db.SaveChangesAsync();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing order commission for order {OrderId}", orderId);
+            // We don't throw here to avoid failing the whole checkout if commission logging fails,
+            // though in a real system this should be robust/queued.
+        }
     }
 
     public async Task<decimal> GetSellerAvailableBalanceAsync(int sellerId)
     {
-        // Total earnings
-        var totalEarnings = await _db.FinancialSellerEarnings
-            .Where(e => e.SellerId == sellerId.ToString())
-            .SumAsync(e => e.SellerAmount);
-
-        // Total withdrawn (paid out)
-        var totalWithdrawn = await _db.FinancialSellerEarnings
-            .Where(e => e.SellerId == sellerId.ToString() && e.Status == Domain.Financial.PayoutStatus.Completed)
-            .SumAsync(e => e.SellerAmount);
-
-        return totalEarnings - totalWithdrawn;
+        return await _walletService.GetSellerAvailableBalanceAsync(sellerId);
     }
 
     public async Task<decimal> GetAdminTotalCommissionsAsync()
     {
-        return await _db.AdminCommissions.SumAsync(c => c.CommissionAmount);
+        var adminWallet = await _db.AdminWallets.FirstOrDefaultAsync();
+        return adminWallet?.TotalCommissionEarned ?? 0;
     }
 }

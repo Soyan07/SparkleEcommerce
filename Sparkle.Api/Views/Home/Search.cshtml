@@ -1,4 +1,4 @@
-@model IEnumerable<Sparkle.Domain.Catalog.Product>
+@model IEnumerable<Sparkle.Api.Models.ProductSearchResult>
 @{
     var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
     var isBangla = langCookie == "bn";
@@ -188,6 +188,8 @@
 </div>
 
 <div class="container my-4">
+
+    
     @if (!Model.Any())
     {
         <div class="search-empty-state">
@@ -202,42 +204,23 @@
         <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3 g-lg-4">
             @foreach (var product in Model)
             {
-                var firstImage = product.Images?.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300?text=No+Image";
-                var discountPercent = product.DiscountPercent ?? 0;
-                var discountedPrice = product.BasePrice * (1 - discountPercent / 100);
-
+                var firstImage = product.Thumbnail ?? "https://via.placeholder.com/300x300?text=No+Image";
+                // Standardized card replacement
+                
                 <div class="col">
-                    <div class="search-product-card" onclick="window.location.href='/home/product/@product.Id'">
-                    <div class="search-image-wrapper">
-                        <img src="@firstImage" alt="@product.Title" class="search-image" loading="lazy">
-                        
-                        @if (discountPercent > 0)
-                        {
-                            <span class="search-discount-badge">
-                                <i class="bi bi-lightning-fill"></i> -@discountPercent%
-                            </span>
-                        }
-                    </div>
-                    
-                    <div class="search-product-info">
-                        <div class="search-product-title">@product.Title</div>
-                        <div>
-                            <span class="search-product-price">৳ @discountedPrice.ToString("N0")</span>
-                            @if (discountPercent > 0)
-                            {
-                                <span class="search-original-price">৳ @product.BasePrice.ToString("N0")</span>
-                            }
-                        </div>
-                        <div class="mt-2">
-                            <small class="text-muted">
-                                <i class="bi bi-star-fill text-warning"></i> @(product.AverageRating > 0 ? product.AverageRating.ToString("F1") : "4.5")
-                                <span class="ms-2 text-success">
-                                    <i class="bi bi-truck"></i> @(isBangla ? "ফ্রি ডেলিভারি" : "Free Delivery")
-                                </span>
-                            </small>
-                        </div>
-                    </div>
-                    </div>
+                     <partial name="_ProductCard" model="@(new {
+                        Id = product.Id,
+                        Title = product.Title,
+                        ImageUrl = firstImage,
+                        Price = product.FinalPrice,
+                        BasePrice = product.BasePrice,
+                        DiscountPercent = product.DiscountPercent ?? 0,
+                        Stock = (int?)null,
+                        Rating = 4.5,
+                        Reviews = 0,
+                        IsFreeShipping = true,
+                        ConfidenceScore = product.ConfidenceScore
+                    })" />
                 </div>
             }
         </div>

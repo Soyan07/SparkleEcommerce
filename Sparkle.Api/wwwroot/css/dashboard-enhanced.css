@@ -134,9 +134,9 @@
     transition: transform 0.3s ease;
 }
 
+/* .stat-card:hover - Removed bubbling effect */
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
 }
 
 .stat-card:hover::before {
@@ -411,10 +411,11 @@
     box-shadow: var(--shadow-sm);
 }
 
+/* .quick-action-btn:hover - Removed bubbling effect */
 .quick-action-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
     border-color: var(--primary);
+    background-color: #f8f9fa;
 }
 
 .quick-action-btn i {

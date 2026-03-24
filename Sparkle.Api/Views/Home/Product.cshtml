@@ -1,559 +1,652 @@
 @using Sparkle.Domain.Catalog
 @model Product
+@inject Sparkle.Domain.Configuration.ISettingsService SettingsService
 @{
-    var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
-    var isBangla = langCookie == "bn";
+    var isBangla = Context.Request.Cookies["sparkle-lang"] == "bn";
+    var isGuestMode = Context.Request.Cookies["GuestMode"] == "true";
+    var siteTitle = await SettingsService.GetValueAsync("SiteTitle", "Sparkle");
     ViewData["Title"] = Model.Title;
     var firstImage = Model.Images.FirstOrDefault()?.Url ?? "https://via.placeholder.com/600x600";
     var discountPercent = Model.DiscountPercent ?? 0;
     var discountedPrice = Model.BasePrice * (1 - discountPercent / 100);
+    var totalStock = Model.Variants.Sum(v => v.Stock);
+    var colors = Model.Variants.Select(v => v.Color).Where(c => !string.IsNullOrEmpty(c)).Distinct().ToList();
+    var sizes = Model.Variants.Select(v => v.Size).Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
 }
 
-<!-- Clean Amazon-like Design -->
-<div class="product-page" style="background: #f7f8fa;">
-<div class="container py-3">
-    <!-- Clean Breadcrumb & Back Button -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size: 0.875rem;">
-                <li class="breadcrumb-item"><a href="/" class="text-decoration-none" style="color: #007185;">@(isBangla ? "হোম" : "Home")</a></li>
-                <li class="breadcrumb-item"><a href="/search?category=@Model.Category?.Slug" class="text-decoration-none" style="color: #007185;">@Model.Category?.Name</a></li>
-                <li class="breadcrumb-item active" style="color: #565959;">@Model.Title</li>
-            </ol>
-        </nav>
-        <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary" style="font-size: 0.875rem;">
-            <i class="bi bi-arrow-left me-1"></i> @(isBangla ? "ফিরে যান" : "Back")
-        </a>
-    </div>
-
-    <div class="row g-3">
-        <!-- Product Gallery (Left Side) -->
-        <div class="col-lg-5">
-            <div class="product-gallery bg-white p-3" style="border: 1px solid #ddd; border-radius: 8px;">
-                <!-- Main Image -->
-                <div class="main-image-container mb-3 position-relative text-center" style="background: #fff; padding: 20px;">
-                    <img src="@firstImage" class="img-fluid" id="mainProductImage" alt="@Model.Title" style="max-height: 500px; object-fit: contain;">
-                    @if (Model.DiscountPercent > 0)
-                    {
-                        <span class="badge position-absolute top-0 start-0 m-2 bg-danger" style="font-size: 0.875rem; padding: 6px 10px;">
-                            -@Model.DiscountPercent%
-                        </span>
-                    }
-                </div>
-
-                <!-- Thumbnail Gallery -->
-                @if (Model.Images.Count > 1)
-                {
-                    <div class="thumbnail-gallery d-flex gap-2 overflow-auto pb-2">
-                        @foreach (var img in Model.Images)
-                        {
-                            <img src="@img.Url" class="thumbnail-img border" 
-                                 onclick="changeMainImage('@img.Url')" alt="Product view"
-                                 style="width: 60px; height: 60px; object-fit: cover; cursor: pointer; border-radius: 4px;">
-                        }
-                    </div>
-                }
-
-                <!-- Action Buttons -->
-                <div class="d-grid gap-2 mt-3">
-                    <button class="btn btn-warning btn-lg" onclick="addToCart(@Model.Id)" style="background: #ffd814; border: 1px solid #fcd200; color: #0f1111; font-weight: 500; border-radius: 8px; padding: 10px;">
-                        <i class="bi bi-cart-plus me-1"></i> @(isBangla ? "কার্টে যোগ করুন" : "Add to Cart")
-                    </button>
-                    <button class="btn btn-lg" onclick="buyNow(@Model.Id)" style="background: #ffa41c; border: 1px solid #ff8f00; color: #0f1111; font-weight: 500; border-radius: 8px; padding: 10px;">
-                        <i class="bi bi-lightning-charge-fill me-1"></i> @(isBangla ? "এখনই কিনুন" : "Buy Now")
-                    </button>
-                    <button class="btn btn-outline-secondary btn-lg" onclick="addToWishlist(@Model.Id)" style="border-radius: 8px; padding: 10px;">
-                        <i class="bi bi-heart me-1"></i> @(isBangla ? "উইশলিস্ট" : "Add to Wishlist")
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Product Info (Middle Section) -->
-        <div class="col-lg-4">
-            <div class="product-info bg-white p-3" style="border: 1px solid #ddd; border-radius: 8px;">
-                <!-- Title -->
-                <h1 class="h4 mb-2" style="color: #0f1111; font-weight: 400; line-height: 1.4;">
-                    @Model.Title
-                </h1>
-                
-                <!-- Rating -->
-                <div class="rating-section mb-3">
-                    <div class="d-flex align-items-center gap-2" style="font-size: 0.875rem;">
-                        <span class="text-warning">★★★★☆</span>
-                        <a href="#reviews" class="text-decoration-none" style="color: #007185;">@(isBangla ? "২৫৬টি রেটিং" : "256 ratings")</a>
-                        @if (Model.IsAdminProduct)
-                        {
-                            <span class="ms-2 badge bg-warning text-dark">Sparkle's Choice</span>
-                        }
-                    </div>
-                </div>
-
-                <hr style="border-color: #e3e6e6; margin: 1rem 0;">
-
-                <!-- Price Section -->
-                <div class="price-section mb-3">
-                    <div class="d-flex align-items-baseline gap-2 mb-1">
-                        @if (Model.DiscountPercent > 0)
-                        {
-                            <span style="font-size: 0.875rem; color: #565959;">-@Model.DiscountPercent%</span>
-                        }
-                        <span class="fw-bold" style="font-size: 1.75rem; color: #b12704;">৳ @((int)discountedPrice)</span>
-                    </div>
-                    @if (Model.DiscountPercent > 0)
-                    {
-                        <div style="font-size: 0.875rem; color: #565959;">
-                            @(isBangla ? "M.R.P.:" : "M.R.P.:")
-                            <span class="text-decoration-line-through">৳ @((int)Model.BasePrice)</span>
-                        </div>
-                    }
-                    <small style="color: #007600; font-size: 0.875rem;">@(isBangla ? "সমস্ত ট্যাক্সসহ" : "Inclusive of all taxes")</small>
-                </div>
-
-                <hr style="border-color: #e3e6e6; margin: 1rem 0;">
-
-                <!-- Product Variants -->
-                @if (Model.Variants.Any())
-                {
-                    <div class="variants-section mb-4">
-                        <h6 class="fw-bold mb-3">@(isBangla ? "অপশন নির্বাচন করুন:" : "Select Options:")</h6>
-                        
-                        @if (Model.Variants.Select(v => v.Color).Distinct().Count() > 1)
-                        {
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">@(isBangla ? "রং:" : "Color:")</label>
-                                <div class="btn-group" role="group">
-                                    @foreach (var color in Model.Variants.Select(v => v.Color).Distinct())
-                                    {
-                                        <input type="radio" class="btn-check" name="color" id="color-@color" value="@color">
-                                        <label class="btn btn-outline-primary" for="color-@color">@color</label>
-                                    }
-                                </div>
-                            </div>
-                        }
-
-                        @if (Model.Variants.Select(v => v.Size).Distinct().Count() > 1)
-                        {
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">@(isBangla ? "সাইজ/ক্ষমতা:" : "Size/Capacity:")</label>
-                                <div class="btn-group" role="group">
-                                    @foreach (var size in Model.Variants.Select(v => v.Size).Distinct())
-                                    {
-                                        <input type="radio" class="btn-check" name="size" id="size-@size" value="@size">
-                                        <label class="btn btn-outline-primary" for="size-@size">@size</label>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-
-                <!-- About Item -->
-                <div class="about-section mb-3">
-                    <h6 style="font-weight: 700; font-size: 1rem; color: #0f1111; margin-bottom: 0.75rem;">@(isBangla ? "পণ্য সম্পর্কে:" : "About this item")</h6>
-                    <ul style="padding-left: 1.5rem; margin-bottom: 0; font-size: 0.875rem; color: #0f1111;">
-                        <li class="mb-1">@Model.ShortDescription</li>
-                        <li class="mb-1">@(isBangla ? "১০০% অরিজিনাল প্রোডাক্ট" : "100% Authentic Product")</li>
-                        <li class="mb-1">@(isBangla ? "৭ দিনের রিটার্ন পলিসি" : "7 Days Return Policy")</li>
-                        <li class="mb-1">@(isBangla ? "ক্যাশ অন ডেলিভারি সুবিধা" : "Cash on Delivery Available")</li>
-                    </ul>
-                </div>
-
-                @if (Model.Seller != null)
-                {
-                    <hr style="border-color: #e3e6e6; margin: 1rem 0;">
-                    <div class="seller-info" style="font-size: 0.875rem;">
-                        <span style="color: #565959;">@(isBangla ? "বিক্রেতা:" : "Sold by")</span>
-                        <a href="#" class="text-decoration-none" style="color: #007185;">@Model.Seller.ShopName</a>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- Buy Box (Right Side) - Sticky -->
-        <div class="col-lg-3">
-            <div class="buy-box bg-white p-3 sticky-top" style="top: 80px; border: 1px solid #ddd; border-radius: 8px;" data-product-id="@Model.Id">
-                <div class="price-display mb-2">
-                    <div class="h5 fw-bold mb-0" style="color: #b12704;">৳ @((int)discountedPrice)</div>
-                    <small style="color: #007600; font-size: 0.875rem;">@(isBangla ? "ফ্রি ডেলিভারি" : "FREE Delivery")</small>
-                </div>
-
-                <hr style="border-color: #e3e6e6; margin: 1rem 0;">
-
-                <!-- Stock Status -->
-                @{
-                    var totalStock = Model.Variants.Sum(v => v.Stock);
-                }
-                @if (totalStock > 20)
-                {
-                    <div class="mb-3" style="font-size: 0.875rem; color: #007600;">
-                        <i class="bi bi-check-circle-fill me-1"></i> @(isBangla ? "স্টকে আছে" : "In Stock")
-                    </div>
-                }
-                else if (totalStock > 0)
-                {
-                    <div class="mb-3" style="font-size: 0.875rem; color: #b12704;">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i> @(isBangla ? $"মাত্র {totalStock}টি বাকি" : $"Only {totalStock} left")
-                    </div>
-                }
-                else
-                {
-                    <div class="mb-3" style="font-size: 0.875rem; color: #b12704;">
-                        <i class="bi bi-x-circle-fill me-1"></i> @(isBangla ? "স্টক শেষ" : "Out of Stock")
-                    </div>
-                }
-
-                <!-- Delivery Info -->
-                <div class="delivery-info mb-3" style="font-size: 0.875rem;">
-                    <div class="mb-2">
-                        <i class="bi bi-geo-alt-fill me-1" style="color: #007185;"></i>
-                        <span style="color: #007185;">@(isBangla ? "ঢাকায় ডেলিভারি" : "Deliver to Dhaka")</span>
-                    </div>
-                    <div style="color: #007600;">
-                        <i class="bi bi-truck me-1"></i>
-                        <strong>@(isBangla ? "আগামীকাল ফ্রি ডেলিভারি" : "FREE Delivery Tomorrow")</strong>
-                    </div>
-                    <small style="color: #565959;">@(isBangla ? "৬ ঘন্টার মধ্যে অর্ডার করুন" : "Order within 6 hours")</small>
-                </div>
-
-                <hr style="border-color: #e3e6e6; margin: 1rem 0;">
-
-                <!-- Quantity Selector -->
-                <div class="quantity-selector mb-3">
-                    <label class="form-label" style="font-size: 0.875rem; font-weight: 600; color: #0f1111;">@(isBangla ? "পরিমাণ:" : "Quantity:")</label>
-                    <select class="form-select" id="quantity" style="width: 80px; font-size: 0.875rem; padding: 0.375rem;">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                    </select>
-                </div>
-
-                <!-- Secure Transaction -->
-                <div class="secure-badge p-2 mb-2" style="background: #f7f8fa; border-radius: 4px; font-size: 0.75rem; color: #565959;">
-                    <i class="bi bi-lock-fill me-1"></i> @(isBangla ? "নিরাপদ লেনদেন" : "Secure transaction")
-                </div>
-
-                <!-- Ships from & Sold by -->
-                <div style="font-size: 0.75rem; color: #565959;">
-                    <div class="mb-1">
-                        <span>@(isBangla ? "শিপ করবে:" : "Ships from")</span>
-                        <span class="fw-semibold"> Sparkle</span>
-                    </div>
-                    <div>
-                        <span>@(isBangla ? "বিক্রয় করেছে:" : "Sold by")</span>
-                        <span class="fw-semibold"> @(Model.Seller?.ShopName ?? "Sparkle Official")</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Product Details Tabs -->
-    <div class="product-tabs mt-4 bg-white p-3" style="border: 1px solid #ddd; border-radius: 8px;">
-        <ul class="nav nav-tabs border-bottom mb-3" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" data-bs-toggle="tab" href="#description" style="color: #0f1111; font-size: 0.875rem; padding: 0.75rem 1rem;">@(isBangla ? "বিবরণ" : "Description")</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#specifications" style="color: #0f1111; font-size: 0.875rem; padding: 0.75rem 1rem;">@(isBangla ? "বিস্তারিত" : "Specifications")</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#reviews" style="color: #0f1111; font-size: 0.875rem; padding: 0.75rem 1rem;">@(isBangla ? "রিভিউ" : "Customer Reviews")</a>
-            </li>
-        </ul>
-
-        <div class="tab-content">
-            <!-- Description Tab -->
-            <div class="tab-pane fade show active" id="description">
-                <div style="font-size: 0.875rem; color: #0f1111; line-height: 1.6;">
-                    <h6 class="fw-bold mb-3" style="font-size: 1rem;">@(isBangla ? "পণ্যের বিবরণ" : "Product Description")</h6>
-                    <p>@Model.Description</p>
-                    
-                    <h6 class="fw-bold mt-4 mb-2" style="font-size: 0.975rem;">@(isBangla ? "বক্সে যা থাকছে:" : "What's in the Box:")</h6>
-                    <ul style="padding-left: 1.5rem;">
-                        <li>1x @Model.Title</li>
-                        <li>@(isBangla ? "ব্যবহারকারী ম্যানুয়াল" : "User Manual")</li>
-                        <li>@(isBangla ? "ওয়ারেন্টি কার্ড" : "Warranty Card")</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Specifications Tab -->
-            <div class="tab-pane fade" id="specifications">
-                <div class="card border-0">
-                    <div class="card-body">
-                        <h5 class="sparkle-section-title mb-3">@(isBangla ? "টেকনিক্যাল স্পেসিফিকেশন" : "Technical Specifications")</h5>
-                        <table class="table table-striped">
-                            <tbody>
-                                <tr>
-                                    <th width="30%">@(isBangla ? "ক্যাটাগরি" : "Category")</th>
-                                    <td>@Model.Category?.Name</td>
-                                </tr>
-                                <tr>
-                                    <th>@(isBangla ? "কন্ডিশন" : "Condition")</th>
-                                    <td>@(isBangla ? "নতুন" : "New")</td>
-                                </tr>
-                                <tr>
-                                    <th>@(isBangla ? "ওয়ারেন্টি" : "Warranty")</th>
-                                    <td>@(isBangla ? "১ বছরের ম্যানুফ্যাকচারার ওয়ারেন্টি" : "1 Year Manufacturer Warranty")</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reviews Tab -->
-            <div class="tab-pane fade" id="reviews">
-                <div class="card border-0">
-                    <div class="card-body">
-                        <h5 class="sparkle-section-title mb-4">@(isBangla ? "কাস্টমার রিভিউ" : "Customer Reviews")</h5>
-                        
-                        <!-- Rating Summary -->
-                        <div class="rating-summary row mb-4">
-                            <div class="col-md-4 text-center">
-                                <div class="display-4 fw-bold">4.5</div>
-                                <div class="text-warning mb-2">⭐⭐⭐⭐⭐</div>
-                                <p class="text-muted">@(isBangla ? "২৫৬টি রিভিউ" : "256 reviews")</p>
-                            </div>
-                            <div class="col-md-8">
-                                <div class="rating-bar mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span>5 ⭐</span>
-                                        <div class="progress flex-grow-1">
-                                            <div class="progress-bar bg-success" style="width: 75%"></div>
-                                        </div>
-                                        <span>192</span>
-                                    </div>
-                                </div>
-                                <div class="rating-bar mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span>4 ⭐</span>
-                                        <div class="progress flex-grow-1">
-                                            <div class="progress-bar bg-primary" style="width: 15%"></div>
-                                        </div>
-                                        <span>38</span>
-                                    </div>
-                                </div>
-                                <!-- Add more rating bars -->
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <!-- Individual Reviews -->
-                        <div class="reviews-list">
-                            <div class="review-item mb-4">
-                                <div class="d-flex gap-3">
-                                    <div class="reviewer-avatar">
-                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                                             style="width: 50px; height: 50px;">
-                                            <strong>JD</strong>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between">
-                                            <h6 class="fw-bold mb-1">John Doe</h6>
-                                            <small class="text-muted">2 days ago</small>
-                                        </div>
-                                        <div class="text-warning mb-2">⭐⭐⭐⭐⭐</div>
-                                        <p class="mb-2">Amazing product! Exactly as described. Fast delivery and great quality.</p>
-                                        <small class="text-success"><i class="bi bi-patch-check-fill"></i> Verified Purchase</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-</div>
-
-@@section Scripts {
 <style>
-    .product-page {
-        min-height: 100vh;
-        padding-bottom: 40px;
-    }
-    
-    /* Amazon-style Tab Navigation */
-    .nav-tabs {
-        border-bottom: 1px solid #d5d9d9;
-    }
-    
-    .nav-tabs .nav-link {
-        background: transparent;
-        border: none;
-        border-bottom: 3px solid transparent;
-        color: #0f1111;
-    }
-    
-    .nav-tabs .nav-link:hover {
-        border-bottom-color: #c7511f;
-        color: #c7511f;
-    }
-    
-    .nav-tabs .nav-link.active {
-        background: transparent;
-        border-bottom: 3px solid #c7511f;
-        color: #c7511f;
-        font-weight: 600;
-    }
-    
-    /* Thumbnail Styles */
-    .thumbnail-img {
-        transition: border-color 0.2s;
-    }
-    
-    .thumbnail-img:hover {
-        border-color: #007185 !important;
-        border-width: 2px !important;
-    }
-    
-    /* Main Image Zoom */
-    .main-image-container:hover #mainProductImage {
-        transform: scale(1.05);
-    }
-    
-    #mainProductImage {
-        transition: transform 0.3s ease;
-    }
-    
-    /* Breadcrumb Links */
-    .breadcrumb-item + .breadcrumb-item::before {
-        content: "›";
-        color: #565959;
-    }
-    
-    /* Scrollbar for thumbnails */
-    .thumbnail-gallery::-webkit-scrollbar {
-        height: 6px;
-    }
-    
-    .thumbnail-gallery::-webkit-scrollbar-track {
-        background: #f0f0f0;
-    }
-    
-    .thumbnail-gallery::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 3px;
-    }
+:root { --primary: #f57224; --secondary: #2e89ff; --text: #212121; --muted: #757575; --border: #e8e8e8; --bg: #fafafa; }
+.pdp { background: #f5f5f5; padding: 12px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; }
+.pdp-card { background: #fff; border-radius: 0; margin-bottom: 8px; }
+
+/* Breadcrumb */
+.pdp-breadcrumb { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: #fff; margin-bottom: 8px; font-size: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.pdp-breadcrumb-nav { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.pdp-breadcrumb-nav a { color: var(--secondary); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+.pdp-breadcrumb-nav a:hover { color: var(--primary); }
+.pdp-breadcrumb-nav span { color: var(--text); font-weight: 500; }
+.pdp-breadcrumb-nav .separator { color: var(--muted); }
+.pdp-breadcrumb-nav i { font-size: 18px; color: var(--primary); }
+.pdp-prev-next { display: flex; align-items: center; gap: 8px; }
+.pdp-prev-next a { color: var(--text); text-decoration: none; font-size: 12px; display: flex; align-items: center; gap: 6px; font-weight: 500; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; transition: all 0.2s; }
+.pdp-prev-next a:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.pdp-prev-next a i { font-size: 14px; }
+
+/* Top Section */
+.pdp-top { display: flex; padding: 16px 16px 8px 16px; gap: 24px; }
+.pdp-gallery { display: flex; gap: 12px; width: 480px; flex-shrink: 0; }
+.pdp-thumbs { display: flex; flex-direction: column; gap: 8px; }
+.pdp-thumbs img { width: 70px; height: 70px; object-fit: cover; border: 2px solid var(--border); cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+.pdp-thumbs img:hover, .pdp-thumbs img.active { border: 2px solid var(--secondary); box-shadow: 0 2px 8px rgba(46, 137, 255, 0.3); }
+.pdp-main-img { flex: 1; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; min-height: 450px; position: relative; border-radius: 8px; background: #fff; overflow: hidden; }
+.pdp-main-img img { max-width: 100%; max-height: 430px; object-fit: contain; transition: transform 0.3s; }
+.pdp-main-img:hover img { transform: scale(1.02); }
+.pdp-main-img .discount-tag { position: absolute; top: 12px; left: 12px; background: var(--primary); color: #fff; padding: 5px 12px; font-size: 13px; font-weight: 600; border-radius: 4px; }
+
+.pdp-info { flex: 1; }
+.pdp-title, h1.pdp-title, .pdp-info h1.pdp-title { font-size: 26px !important; font-weight: 600 !important; color: var(--text) !important; margin: 0 0 10px !important; line-height: 1.3 !important; }
+
+/* Unified Info Bar */
+.info-bar { padding: 10px 12px; margin-bottom: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid var(--border); }
+.info-bar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.info-bar-row:first-child { margin-bottom: 8px; }
+.info-bar-shop-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: linear-gradient(135deg, #fff3e6, #ffe8d6); border: 1px solid var(--primary); border-radius: 4px; font-size: 12px; font-weight: 600; color: var(--primary); cursor: pointer; text-decoration: none; }
+.info-bar-shop-badge:hover { background: var(--primary); color: #fff; }
+.info-bar-shop-badge i { font-size: 14px; }
+.info-bar-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.info-bar-item a { color: var(--secondary); text-decoration: none; }
+.info-bar-item .stars { color: #ffc107; font-size: 11px; }
+.info-bar-divider { width: 1px; height: 14px; background: var(--border); }
+.info-bar-stat { font-size: 11px; color: var(--muted); }
+.info-bar-stat b { color: var(--primary); font-weight: 600; }
+.btn-view-store-icon { width: 28px; height: 28px; padding: 0; background: var(--secondary); color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-view-store-icon:hover { background: #1a7ae8; }
+.btn-chat-seller { padding: 4px 10px; background: #fff; color: var(--primary); border: 1px solid var(--primary); border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; gap: 0; transition: all 0.2s; margin-left: auto; text-decoration: none; min-width: 80px; }
+.btn-chat-seller i { font-size: 11px; }
+.btn-report { width: 32px; height: 32px; border-radius: 4px; border: none; background: transparent; color: #ff0000; display: flex; align-items: center; justify-content: center; position: relative; top: -5px; transition: all 0.2s; cursor: pointer; margin-right: 15px; }
+.btn-report:hover { background: #ffebee; border-color: #d50000; color: #d50000; }
+.btn-report img { width: 20px; height: 20px; }
+.btn-chat-seller:hover { background: var(--primary); color: #fff; }
+.pdp-rating { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+.pdp-rating .stars { color: #ffc107; font-size: 16px; }
+.pdp-rating a { color: var(--secondary); text-decoration: none; }
+.pdp-price-box { background: var(--bg); padding: 12px 14px; margin-bottom: 16px; }
+.pdp-price { color: var(--primary); font-size: 22px; font-weight: 500; letter-spacing: -0.5px; }
+.pdp-price-old { color: var(--muted); text-decoration: line-through; font-size: 16px; margin-left: 10px; }
+.pdp-discount { background: var(--primary); color: #fff; font-size: 13px; padding: 3px 8px; margin-left: 8px; border-radius: 3px; position: relative; top: -2px; }
+
+.pdp-option { margin-bottom: 20px; }
+.pdp-label { font-size: 14px; color: var(--text); margin-bottom: 10px; font-weight: 500; }
+.pdp-colors { display: flex; gap: 10px; align-items: center; }
+.pdp-color-circle { width: 32px; height: 32px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+.pdp-color-circle:hover, .pdp-color-circle.active { border-color: var(--secondary); transform: scale(1.1); }
+.pdp-sizes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pdp-sizes button { padding: 6px 12px; border: 1px solid var(--border); background: #fff; font-size: 12px; cursor: pointer; border-radius: 4px; transition: all 0.2s; min-width: 32px; }
+.pdp-sizes button:hover, .pdp-sizes button.active { border-color: var(--secondary); color: var(--secondary); background: rgba(46, 137, 255, 0.05); }
+.pdp-qty-row { display: flex; align-items: center; gap: 12px; }
+.pdp-qty { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.pdp-qty button { width: 28px; height: 28px; border: none; background: #fff; cursor: pointer; font-size: 13px; color: var(--text); transition: background 0.2s; }
+.pdp-qty button:hover { background: var(--bg); }
+.pdp-qty input { width: 36px; height: 28px; border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); text-align: center; font-size: 12px; font-weight: 500; }
+.pdp-stock { font-size: 14px; color: #f57224; font-weight: 500; }
+.pdp-stock.low { color: var(--primary); }
+.btn-add-cart { background: #fff; color: var(--secondary); border: 1px solid var(--secondary); padding: 6px 14px; font-size: 12px; font-weight: 500; cursor: pointer; border-radius: 3px; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
+.btn-add-cart:hover { background: var(--secondary); color: #fff; }
+
+.pdp-actions { display: flex; gap: 8px; margin-top: 10px; }
+.btn-quick { min-width: 120px; background: #fff !important; color: #2e89ff !important; border: 2.5px solid #2e89ff !important; padding: 6px 20px !important; font-size: 13px !important; font-weight: 600; cursor: pointer; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.2s ease; letter-spacing: 0.3px; }
+.btn-quick i { font-size: 18px; }
+.btn-quick:hover { background: #2e89ff !important; color: #fff !important; }
+.btn-buy { min-width: 165px; background: #f57224 !important; color: #fff !important; border: none !important; padding: 6px 20px !important; font-size: 13px !important; font-weight: 600; cursor: pointer; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.2s ease; letter-spacing: 0.3px; }
+.btn-buy i { font-size: 18px; }
+.btn-buy:hover { background: #e5651f !important; }
+.btn-wish { border: 1px solid var(--border); background: #fff; width: 32px !important; height: 32px !important; cursor: pointer; font-size: 12px !important; color: var(--muted); border-radius: 3px; transition: all 0.2s; display: flex !important; align-items: center !important; justify-content: center !important; padding: 0 !important; margin-top: 0; }
+.btn-wish:hover { color: #e74c3c; border-color: #e74c3c; }
+
+/* Seller Store Card - Minimal */
+.seller-card { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fafbfc; }
+.seller-header { display: flex; align-items: center; justify-content: space-between; }
+.seller-left { display: flex; align-items: center; gap: 10px; }
+.seller-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 600; }
+.seller-info { }
+.seller-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.seller-meta { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.seller-meta .stars { color: #ffc107; font-size: 10px; }
+.seller-stats { display: flex; gap: 12px; }
+.seller-stat { text-align: center; font-size: 11px; }
+.seller-stat-value { font-weight: 600; color: var(--text); }
+.seller-stat-label { color: var(--muted); font-size: 10px; }
+.btn-view-store { padding: 6px 14px; background: var(--secondary); color: #fff; border: none; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s; }
+.btn-view-store:hover { background: #1a7ae8; }
+
+/* Product Description Preview - Minimal */
+.desc-preview { margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+.desc-preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.desc-preview-title { font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.desc-preview-title i { color: var(--secondary); font-size: 14px; }
+.desc-preview-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.desc-preview-more { color: var(--secondary); font-size: 11px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.desc-preview-more:hover { text-decoration: underline; }
+.trust-row { display: flex; justify-content: space-around; padding: 10px 16px; border-top: 1px solid var(--border); }
+.trust-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text); }
+.trust-item i { font-size: 16px; color: var(--secondary); }
+
+/* Tabs */
+.pdp-tabs { padding: 0 12px; }
+.tab-header { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 0; }
+.tab-header a { padding: 12px 20px; font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -2px; font-family: 'SolaimanLipi', sans-serif; }
+.tab-header a:hover { color: var(--primary); }
+.tab-header a.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-body { padding: 12px 0; }
+
+/* Specs Table */
+.specs-section { padding: 12px; }
+.specs-title { background: var(--secondary); color: #fff; padding: 10px 16px; font-size: 14px; font-weight: 600; margin-bottom: 0; font-family: 'SolaimanLipi', sans-serif; }
+.specs-table { width: 100%; border-collapse: collapse; }
+.specs-table tr { border-bottom: 1px solid var(--border); }
+.specs-table th { background: var(--bg); padding: 12px 16px; text-align: left; font-size: 14px; font-weight: normal; color: var(--muted); width: 180px; }
+.specs-table td { padding: 12px 16px; font-size: 14px; color: var(--text); }
+
+/* Description */
+.desc-section { padding: 20px; border-top: 1px solid var(--border); }
+.desc-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; font-family: 'SolaimanLipi', sans-serif; }
+.desc-text { font-size: 14px; color: var(--text); line-height: 1.8; white-space: pre-line; }
+
+/* Reviews */
+/* Reviews */
+.review-section { padding: 20px; border-top: 1px solid var(--border); }
+.review-header { display: flex; gap: 30px; margin-bottom: 24px; align-items: flex-start; }
+.review-score { text-align: left; }
+.review-score .num { font-size: 48px; font-weight: 700; color: #f97316; line-height: 1; margin-bottom: 4px; }
+.review-score .stars { color: #f97316; font-size: 18px; letter-spacing: 2px; }
+.review-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+.review-filters button { padding: 6px 12px; border: 1px solid var(--border); background: #fff; font-size: 13px; border-radius: 4px; cursor: pointer; color: var(--text); transition: all 0.2s; }
+.review-filters button:hover { border-color: var(--primary); color: var(--primary); }
+.review-filters button.active { border-color: #f97316; color: #f97316; background: #fff7ed; }
+.review-photos { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.review-photos img { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; }
+
+/* Review Item */
+.review-item { padding: 20px 0; border-bottom: 1px solid var(--border); }
+.review-item:last-child { border-bottom: none; }
+.review-user { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.review-avatar { width: 40px; height: 40px; border-radius: 50%; background: #e2e8f0; color: #64748b; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; }
+.review-meta-info { display: flex; flex-direction: column; }
+.review-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.review-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.review-stars { color: #f97316; font-size: 14px; margin-bottom: 8px; }
+.review-text { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 12px; }
+.review-actions { display: flex; gap: 20px; align-items: center; }
+.btn-review-action { background: none; border: none; padding: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; transition: color 0.2s; }
+.btn-review-action i { font-size: 18px; }
+.btn-review-action:hover { color: var(--text); }
+.btn-review-action.report:hover { color: #ef4444; }
+
+/* Related */
+.related-section { padding: 20px; }
+.related-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); font-family: 'SolaimanLipi', sans-serif; }
+.related-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.related-card { 
+    border: 1px solid var(--border); 
+    text-decoration: none; 
+    border-radius: 8px; 
+    overflow: hidden; 
+    background: #fff; 
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.related-card:hover { 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+    transform: translateY(-2px);
+    border-color: #e2e8f0;
+}
+.related-card img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.related-card-body { padding: 10px; }
+.related-card-name { 
+    font-size: 12px; 
+    color: var(--text); 
+    display: -webkit-box; 
+    -webkit-line-clamp: 2; 
+    -webkit-box-orient: vertical; 
+    overflow: hidden; 
+    margin-bottom: 6px;
+    line-height: 1.4;
+    min-height: 34px;
+}
+.related-card-price { 
+    font-size: 14px; 
+    font-weight: 700; 
+    color: #f97316;
+    font-family: 'SolaimanLipi', sans-serif;
+}
+
+@@media (max-width: 991px) {
+    .pdp-top { flex-direction: column; }
+    .pdp-gallery { width: 100%; }
+    .related-grid { grid-template-columns: repeat(3, 1fr); }
+}
 </style>
 
-<script>
-    const defaultVariantId = @Model.Variants.First().Id;
+<div class="pdp">
+<div class="container">
+    <!-- Breadcrumb Navigation -->
+    <div class="pdp-breadcrumb">
+        <div class="pdp-breadcrumb-nav">
+            <a href="/"><i class="bi bi-house-door"></i></a>
+            <span class="separator">»</span>
+            <a href="/home/category/@Model.Category?.Id">@Model.Category?.Name</a>
+            <span class="separator">»</span>
+            <span>@Model.Title</span>
+        </div>
+        <div class="pdp-prev-next">
+            <a href="#" onclick="history.back();return false;"><i class="bi bi-chevron-left"></i> Previous Product</a>
+            <a href="/">Next Product <i class="bi bi-chevron-right"></i></a>
+        </div>
+    </div>
+    <div class="pdp-card">
+        <!-- Main Product Section -->
+        <div class="pdp-top">
+            <div class="pdp-gallery">
+                <div class="pdp-thumbs">
+                    @foreach (var img in Model.Images.Take(6))
+                    {
+                        <img src="@img.Url" onclick="changeImg('@img.Url',this)" class="@(img == Model.Images.First() ? "active" : "")" alt="">
+                    }
+                </div>
+                <div class="pdp-main-img">
+                    @if (discountPercent > 0) { <span class="discount-tag">-@((int)discountPercent)%</span> }
+                    <img src="@firstImage" id="mainImg" alt="@Model.Title">
+                </div>
+            </div>
+            <div class="pdp-info">
+                <div class="d-flex justify-content-between align-items-center">
+                        <h1 class="pdp-title mb-0">@Model.Name</h1>
+                        <a href="@Url.Action("Create", "Report", new { type = "Product", id = Model.Id })" class="btn-report" title="Report this product">
+                            <i class="bi bi-flag-fill" style="font-size: 18px;"></i>
+                        </a>
+                    </div>
+                
+                <!-- Unified Info Bar -->
+                <div class="info-bar">
+                    <div class="info-bar-row">
+                        <a href="/shop/@Model.SellerId" class="info-bar-shop-badge"><i class="bi bi-shop"></i> @(Model.Seller?.ShopName ?? "Sparkle Store")</a>
+                        <span class="info-bar-stat"><b>98%</b> Positive</span>
+                        <span class="info-bar-stat"><b>5.2k</b> Followers</span>
+                        <a href="/Chat/StartChat?sellerId=@Model.SellerId&productId=@Model.Id" class="btn-chat-seller">
+                            <div style="display: flex; align-items: center; gap: 4px; font-weight: 600; line-height: 1.2;">
+                                <i class="bi bi-chat-dots"></i> <span>Chat</span>
+                            </div>
+                            <span style="font-size: 12px; opacity: 0.8; line-height: 1.2;">with Seller</span>
+                        </a>
+                    </div>
+                    <div class="info-bar-row">
+                        <span class="info-bar-item">Category: <a href="/home/category/@Model.Category?.Id">@Model.Category?.Name</a></span>
+                        <span class="info-bar-divider"></span>
+                        <span class="info-bar-item"><span class="stars">★★★★☆</span> @Model.AverageRating.ToString("F1") <a href="#reviews">(@Model.TotalReviews)</a></span>
+                        <span class="info-bar-divider"></span>
+                        <span class="info-bar-item">@(totalStock * 5)+ Sold</span>
+                    </div>
+                </div>
 
-    function changeMainImage(imageUrl) {
-        document.getElementById('mainProductImage').src = imageUrl;
-    }
-    
-    function increaseQuantity() {
-        const input = document.getElementById('quantity');
-        const max = parseInt(input.max);
-        if (parseInt(input.value) < max) {
-            input.value = parseInt(input.value) + 1;
-        }
-    }
-    
-    function decreaseQuantity() {
-        const input = document.getElementById('quantity');
-        if (parseInt(input.value) > 1) {
-            input.value = parseInt(input.value) - 1;
-        }
-    }
-    
-    async function addToCart(productId) {
-        const quantity = parseInt(document.getElementById('quantity').value);
-
-        // If user is logged in, hit backend cart
-        if (window.isAuthenticated === 'true') {
-            try {
-                const body = new URLSearchParams();
-                body.append('productVariantId', defaultVariantId.toString());
-                body.append('quantity', quantity.toString());
-                body.append('returnUrl', window.location.pathname);
-
-                const response = await fetch('/cart/add', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: body.toString()
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to add to cart');
+                <!-- Product Description Preview - Right after info bar -->
+                @if (!string.IsNullOrEmpty(Model.Description)) {
+                <div class="desc-preview">
+                    <div class="desc-preview-header">
+                        <div class="desc-preview-title"><i class="bi bi-file-text"></i> Description</div>
+                    </div>
+                    <div class="desc-preview-text">@Model.Description</div>
+                </div>
                 }
+                <!-- Split View: Options/Price vs About Product -->
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <!-- Left Column: Options, Price, Actions -->
+                    <div style="flex: 1;">
+                        <!-- Color Family + Size on same row -->
+                        <div class="pdp-options-row" style="display: flex; gap: 40px; align-items: flex-start; margin-bottom: 16px; margin-left: 5px;">
+                            @if (colors.Any()) {
+                            <div class="pdp-option" style="margin-bottom: 0;">
+                                <div class="pdp-label">Color Family</div>
+                                <div class="pdp-colors">
+                                    @{ var colorMap = new Dictionary<string, string> {
+                                        {"red", "#e74c3c"}, {"blue", "#3498db"}, {"green", "#27ae60"}, {"black", "#2c3e50"},
+                                        {"white", "#ecf0f1"}, {"yellow", "#f1c40f"}, {"orange", "#e67e22"}, {"purple", "#9b59b6"},
+                                        {"pink", "#e91e63"}, {"gray", "#95a5a6"}, {"grey", "#95a5a6"}, {"brown", "#8b4513"},
+                                        {"navy", "#001f3f"}, {"beige", "#f5f5dc"}, {"maroon", "#800000"}, {"olive", "#808000"}
+                                    }; }
+                                    @foreach (var c in colors) {
+                                        var bgColor = colorMap.ContainsKey((c ?? "").ToLower()) ? colorMap[(c ?? "").ToLower()] : "#ccc";
+                                        <span class="pdp-color-circle @(c==colors.First()?"active":"")" 
+                                              style="background-color: @bgColor;" 
+                                              onclick="selColor('@c',this, @(Model.Variants.FirstOrDefault(v => v.Color == c)?.Id ?? 0))" 
+                                              title="@c"></span>
+                                    }
+                                </div>
+                            </div>
+                            }
+                            @if (sizes.Any()) {
+                            <div class="pdp-option" style="margin-bottom: 0;">
+                                <div class="pdp-label">Size</div>
+                                <div class="pdp-sizes">
+                                    @foreach (var s in sizes) { <button class="@(s==sizes.First()?"active":"")" onclick="selSize('@s',this, @(Model.Variants.FirstOrDefault(v => v.Size == s)?.Id ?? 0))">@s</button> }
+                                </div>
+                            </div>
+                            }
+                        </div>
 
-                if (typeof updateCartCount === 'function') {
-                    updateCartCount();
-                }
+                        <!-- Price + Quantity + Stock on same row -->
+                        <div class="pdp-price-qty-row" style="display: flex; align-items: center; gap: 20px; margin-bottom: 16px;">
+                            <div class="pdp-price-box" style="margin-bottom: 0; padding: 0; background: transparent;">
+                                <span class="pdp-price"><span style="font-family: 'SolaimanLipi', sans-serif; font-size: 1.5em; position: relative; top: 4px;">৳</span> @((int)discountedPrice)</span>
+                                @if (discountPercent > 0) {
+                                    <span class="pdp-price-old"><span style="font-family: 'SolaimanLipi', sans-serif; font-size: 1.25em; position: relative; top: 2px;">৳</span> @((int)Model.BasePrice)</span>
+                                    <span class="pdp-discount">-@((int)discountPercent)%</span>
+                                }
+                            </div>
+                            <div class="pdp-qty-row" style="display: flex; align-items: center; gap: 12px;">
+                                <div class="pdp-qty">
+                                    <button onclick="chgQty(-1)">−</button>
+                                    <input type="text" id="qty" value="1" readonly>
+                                    <button onclick="chgQty(1)">+</button>
+                                </div>
+                                <span class="pdp-stock @(totalStock < 10 ? "low" : "")" style="text-align: center; line-height: 1.2; font-size: 10px;">In Stock:<br>(@totalStock)</span>
+                            </div>
+                        </div>
 
-                showToast('Added to cart!', 'success');
-                return true;
-            } catch (e) {
-                showToast('Could not add to cart. Please try again.', 'danger');
-                return false;
+                        @if (!isGuestMode) {
+                            <div class="pdp-actions align-items-center">
+                                <button id="add-to-cart-btn" class="btn-quick" onclick="addCart(@Model.Id)">
+                                    <i class="bi bi-cart-plus"></i> <span class="btn-text">ADD TO CART</span>
+                                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                </button>
+                                <button id="buy-now-btn" class="btn-buy" onclick="buyNow(@Model.Id)">
+                                    <i class="bi bi-lightning-fill"></i> <span class="btn-text">BUY NOW</span>
+                                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                </button>
+                                <button class="btn-wish ms-2" onclick="addWish()" title="Add to Wishlist">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Right Column: About Product -->
+                    <div style="width: 240px; padding-left: 10px; border-left: 1px solid var(--border);">
+                        <div style="font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 10px;">About Product</div>
+                        <ul style="font-size: 12px; color: var(--muted); padding-left: 16px; margin: 0; line-height: 1.6;">
+                            @if (!string.IsNullOrEmpty(Model.Features)) {
+                                foreach(var f in Model.Features.Split('|').Take(5)) {
+                                    <li>@f</li>
+                                }
+                            } else {
+                                <li>100% Authentic</li>
+                                <li>Premium Quality</li>
+                                <li>Best Price Guaranteed</li>
+                                <li>Fast Delivery</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <!-- Tabs -->
+    <div class="pdp-card">
+        <div class="pdp-tabs">
+            <div class="tab-header">
+                <a href="#" class="active" onclick="showTab('specs',this)">Specification</a>
+                <a href="#" onclick="showTab('desc',this)">Description</a>
+                <a href="#" onclick="showTab('reviews',this)">Customer Reviews</a>
+            </div>
+        </div>
+
+        <div id="tab-specs" class="specs-section">
+            <div class="specs-title">Basic Information</div>
+            <table class="specs-table">
+                <tr><th>Processor</th><td>@(Model.Brand?.Name ?? "Standard Processor")</td></tr>
+                <tr><th>Display</th><td>@(Model.Dimensions ?? "Standard Display")</td></tr>
+                <tr><th>Memory</th><td>@(Model.Weight ?? "Standard Memory")</td></tr>
+                <tr><th>Category</th><td>@Model.Category?.Name</td></tr>
+                <tr><th>Brand</th><td>@(Model.Brand?.Name ?? Model.Seller?.ShopName ?? "Generic")</td></tr>
+                <tr><th>SKU</th><td>SP@(Model.Id.ToString("D6"))</td></tr>
+            </table>
+            @if (!string.IsNullOrEmpty(Model.Features)) {
+                <div class="specs-title" style="margin-top:16px;">Special Features</div>
+                <table class="specs-table">
+                    @foreach (var f in Model.Features.Split('|')) { <tr><th></th><td>@f</td></tr> }
+                </table>
             }
+        </div>
+
+        <div id="tab-desc" class="desc-section" style="display:none;">
+            <div class="desc-title">Description</div>
+            <div class="desc-text">@Model.Description</div>
+        </div>
+
+        <div id="tab-reviews" class="review-section" style="display:none;">
+            <div class="review-header">
+                <div class="review-score">
+                    <div class="num">@Model.AverageRating.ToString("F1")</div>
+                    <div class="stars">★★★★★</div>
+                </div>
+                <div style="flex:1;">
+                    <div class="review-filters">
+                        <button class="active" onclick="filterReviews('all', this)">All</button>
+                        <button onclick="filterReviews(5, this)">5 ★</button><button onclick="filterReviews(4, this)">4 ★</button><button onclick="filterReviews(3, this)">3 ★</button><button onclick="filterReviews(2, this)">2 ★</button><button onclick="filterReviews(1, this)">1 ★</button>
+                    </div>
+                    <div class="review-photos">
+                        @for(int i=0;i<6;i++){<img src="@firstImage" alt="Review">}
+                    </div>
+                </div>
+            </div>
+            @for(int i=0;i<3;i++){
+            var rating = 5 - i; // 5, 4, 3 stars for variety
+            <div class="review-item" data-rating="@rating">
+                <div class="review-user">
+                    <div class="review-avatar">@((char)('A'+i))</div>
+                    <div class="review-meta-info">
+                        <div class="review-name">Customer @((char)('A'+i))</div>
+                        <div class="review-date">@DateTime.Now.AddDays(-i-1).ToString("dd MMM yyyy")</div>
+                    </div>
+                </div>
+                <div class="review-stars" data-stars="@rating"></div>
+                <div class="review-text">Excellent product! The quality is amazing. Fast delivery and exactly as described. Highly recommended!</div>
+                <div class="review-actions">
+                    <button class="btn-review-action"><i class="bi bi-hand-thumbs-up"></i> Helpful (@(42-i*10))</button>
+                    <button class="btn-review-action report"><i class="bi bi-flag"></i> Report</button>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    <div class="pdp-card related-section">
+        <div class="related-title">You'll Also Like</div>
+        <div class="related-grid" id="relatedGrid"></div>
+    </div>
+</div>
+</div>
+
+@section Scripts {
+<script>
+    // Serialize variant data for dynamic updates
+    const variants = @Html.Raw(Json.Serialize(Model.Variants.Select(v => new { 
+        id = v.Id, 
+        color = (v.Color ?? "").ToLower(), 
+        size = v.Size, 
+        price = v.Price, 
+        stock = v.Stock 
+    })));
+    
+    // Config
+    const discountPct = @(Model.DiscountPercent ?? 0);
+    const basePrice = @Model.BasePrice;
+    
+    // State
+    let selectedColor = '@(colors.FirstOrDefault() ?? "")'.toLowerCase();
+    let selectedSize = '@(sizes.FirstOrDefault() ?? "")';
+    let vid = @Model.Variants.First().Id;
+
+    // Initialize
+    updateProductUI();
+
+    function changeImg(u,e){
+        document.getElementById('mainImg').src=u;
+        document.querySelectorAll('.pdp-thumbs img').forEach(i=>i.classList.remove('active'));
+        e.classList.add('active');
+    }
+
+    function selColor(c, e) {
+        document.querySelectorAll('.pdp-color-circle').forEach(i=>i.classList.remove('active'));
+        e.classList.add('active');
+        selectedColor = c.toLowerCase();
+        findVariant();
+    }
+
+    function selSize(s, e) {
+        document.querySelectorAll('.pdp-sizes button').forEach(b=>b.classList.remove('active'));
+        e.classList.add('active');
+        selectedSize = s;
+        findVariant();
+    }
+
+    function findVariant() {
+        // Find variant matching current selection
+        // Logic: specific match > first match with color > first match with size > default
+        let v = variants.find(x => x.color === selectedColor && x.size === selectedSize);
+        
+        if(!v && selectedColor) v = variants.find(x => x.color === selectedColor);
+        if(!v && selectedSize) v = variants.find(x => x.size === selectedSize);
+        if(!v) v = variants[0];
+
+        if(v) {
+            vid = v.id;
+            updateProductUI(v);
+        }
+    }
+
+    function updateProductUI(variant) {
+        if(!variant) {
+             variant = variants.find(x => x.id === vid) || variants[0];
         }
 
-        // Guest users: fallback to localStorage so they still see cart feedback
-        let cart = JSON.parse(localStorage.getItem('sparkle-cart') || '[]');
-        const existingItem = cart.find(item => item.productId === productId);
+        // 1. Calculate Price
+        // If variant has specific price > 0, use it. Otherwise use base price.
+        // NOTE: Seller panel usually sets BasePrice on product and 0 on variant if not overriding.
+        // Assuming Logic: If Variant.Price > 0, it overrides Product.BasePrice.
+        let effectivePrice = variant.price > 0 ? variant.price : basePrice;
+        let finalPrice = Math.round(effectivePrice * (1 - discountPct / 100));
+
+        // Update DOM Elements
+        const priceEl = document.querySelector('.pdp-price');
+        const oldPriceEl = document.querySelector('.pdp-price-old');
         
-        if (existingItem) {
-            existingItem.quantity += quantity;
+        if(priceEl) priceEl.innerHTML = `<span style="font-family: 'SolaimanLipi', sans-serif; font-size: 1.5em; position: relative; top: 4px;">৳</span> ${finalPrice}`;
+        if(oldPriceEl && discountPct > 0) oldPriceEl.innerHTML = `<span style="font-family: 'SolaimanLipi', sans-serif; font-size: 1.25em; position: relative; top: 2px;">৳</span> ${effectivePrice}`;
+
+        // 2. Update Stock
+        const stockEl = document.querySelector('.pdp-stock');
+        if(stockEl) {
+            stockEl.innerHTML = `In Stock:<br>(${variant.stock})`;
+            if(variant.stock < 10) stockEl.classList.add('low'); else stockEl.classList.remove('low');
+        }
+        
+        // 3. Update Button State
+        const btn = document.getElementById('buy-now-btn');
+        const cartBtn = document.getElementById('add-to-cart-btn');
+        if(variant.stock <= 0) {
+           if(btn) { btn.disabled = true; btn.querySelector('.btn-text').textContent = 'OUT OF STOCK'; btn.style.backgroundColor = '#ccc'; }
+           if(cartBtn) { cartBtn.disabled = true; }
         } else {
-            cart.push({
-                id: Date.now(),
-                productId: productId,
-                quantity: quantity,
-                name: '@Model.Title',
-                price: @discountedPrice,
-                image: '@firstImage'
-            });
-        }
-        
-        localStorage.setItem('sparkle-cart', JSON.stringify(cart));
-        
-        const count = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-        document.getElementById('cartCount').textContent = count > 99 ? '99+' : count;
-        
-        showToast('Added to cart!', 'success');
-        return true;
-    }
-    
-    async function buyNow(productId) {
-        const ok = await addToCart(productId);
-        if (ok) {
-            window.location.href = '/cart';
+           if(btn) { btn.disabled = false; btn.querySelector('.btn-text').textContent = 'BUY NOW'; btn.style.backgroundColor = ''; }
+           if(cartBtn) { cartBtn.disabled = false; }
         }
     }
-    
-    function addToWishlist(productId) {
-        showToast('Wishlist feature is coming soon.', 'info');
+
+    function chgQty(d){
+        const i=document.getElementById('qty');
+        // Find current stock cap
+        const v = variants.find(x => x.id === vid) || variants[0];
+        const max = v ? v.stock : @totalStock;
+        i.value=Math.max(1,Math.min(+i.value+d, max));
     }
-    
-    function copyProductLink() {
-        navigator.clipboard.writeText(window.location.href);
-        showToast('Link copied to clipboard!', 'success');
-    }
-    
-    function showToast(message, type) {
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
-        toast.style.zIndex = '9999';
-        toast.innerHTML = `<strong>${message}</strong>`;
-        document.body.appendChild(toast);
+
+    function showTab(t,e){['specs','desc','reviews'].forEach(x=>document.getElementById('tab-'+x).style.display='none');document.getElementById('tab-'+t).style.display='block';document.querySelectorAll('.tab-header a').forEach(a=>a.classList.remove('active'));e.classList.add('active');event.preventDefault();}
+
+    async function addCart(id){
+        const q=+document.getElementById('qty').value;
+        const btn = document.getElementById('add-to-cart-btn');
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.spinner-border');
         
-        setTimeout(() => toast.remove(), 3000);
+        btn.disabled = true;
+        btnText.classList.add('opacity-50');
+        spinner.classList.remove('d-none');
+
+        try {
+            const b=new URLSearchParams();
+            b.append('productVariantId',vid);
+            b.append('quantity',q);
+            const r=await fetch('/cart/add',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:b});
+            
+            if(!r.ok) throw 0;
+            
+            if(typeof updateCartCount==='function') updateCartCount();
+            showToast('Product added to cart successfully.');
+            return true;
+        } catch {
+            showToast('Something went wrong. Please try again.','danger');
+            return false;
+        } finally {
+            btn.disabled = false;
+            btnText.classList.remove('opacity-50');
+            spinner.classList.add('d-none');
+        }
     }
+    async function buyNow(id){if(await addCart(id))window.location.href='/cart';}
+    function addWish(){showToast('Added to wishlist!');}
+
+// Star rating functions
+function renderStars(count) {
+    const filled = '★';
+    const empty = '☆';
+    return filled.repeat(count) + empty.repeat(5 - count);
+}
+
+function filterReviews(rating, btn) {
+    // Get all review items
+    const reviews = document.querySelectorAll('.review-item');
     
-    // Subscribe to real-time stock updates via SignalR
-    if (typeof inventoryConnection !== 'undefined') {
-        inventoryConnection.invoke("SubscribeToProduct", @Model.Id);
-    }
+    // Update active button
+    document.querySelectorAll('.review-filters button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Filter reviews
+    reviews.forEach(review => {
+        if (rating === 'all') {
+            review.style.display = '';
+        } else {
+            const reviewRating = parseInt(review.getAttribute('data-rating'));
+            review.style.display = reviewRating === rating ? '' : 'none';
+        }
+    });
+}
+
+// Initialize star displays on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.review-stars[data-stars]').forEach(el => {
+        const stars = parseInt(el.getAttribute('data-stars'));
+        el.textContent = renderStars(stars);
+    });
+});
+
+fetch('/api/products/related/@Model.CategoryId?exclude=@Model.Id&limit=6').then(r=>r.ok?r.json():[]).then(p=>{
+    document.getElementById('relatedGrid').innerHTML=p.length?p.map(x=>`<a href="/home/product/${x.id}" class="related-card"><img src="${x.thumbnail||'https://via.placeholder.com/200'}"><div class="related-card-body"><div class="related-card-name">${x.title}</div><div class="related-card-price">৳${Math.round(x.basePrice*(1-(x.discountPercent||0)/100))}</div></div></a>`).join(''):'<p class="text-muted">No related products</p>';
+}).catch(()=>{});
 </script>
 }

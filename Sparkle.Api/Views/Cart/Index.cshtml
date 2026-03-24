@@ -1,267 +1,468 @@
 @model Sparkle.Api.Controllers.CartController.CartViewModel
 @{
-    ViewData["Title"] = "Shopping Cart";
-    var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
-    var isBangla = langCookie == "bn";
+    ViewData["Title"] = "Your Cart";
 }
 
 <style>
-    .cart-page { padding: 2rem 0; background: #f8f9fa; min-height: calc(100vh - 400px); }
-    .cart-item { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; display: flex; gap: 1.5rem; }
-    .cart-item-image { width: 120px; height: 120px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-    .cart-item-details { flex: 1; }
-    .cart-item-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #333; }
-    .cart-item-variant { font-size: 0.9rem; color: #666; margin-bottom: 0.5rem; }
-    .cart-item-price { font-size: 1.2rem; font-weight: 700; color: #ff6a00; }
-    .cart-item-actions { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
-    .quantity-control { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; }
-    .quantity-control button { border: none; background: white; padding: 0.5rem 1rem; cursor: pointer; font-size: 1.2rem; }
-    .quantity-control button:hover { background: #f5f5f5; }
-    .quantity-control input { width: 60px; text-align: center; border: none; padding: 0.5rem; font-weight: 600; }
-    .remove-btn { color: #dc3545; cursor: pointer; font-size: 0.9rem; }
-    .remove-btn:hover { text-decoration: underline; }
-    .summary-box { background: white; padding: 1.5rem; border-radius: 8px; position: sticky; top: 120px; }
-    .summary-row { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #eee; }
-    .summary-total { font-size: 1.3rem; font-weight: 700; color: #ff6a00; padding: 1rem 0; border-top: 2px solid #ff6a00; margin-top: 0.5rem; }
-    .promo-input-group { display: flex; gap: 0.5rem; margin: 1rem 0; }
-    .promo-input-group input { flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; }
-    .promo-input-group button { padding: 0.75rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap; }
-    .promo-input-group button:hover { background: #218838; }
-    .promo-applied { background: #d4edda; padding: 0.75rem; border-radius: 4px; margin: 1rem 0; color: #155724; display: flex; justify-content: space-between; align-items: center; }
-    .promo-remove { cursor: pointer; color: #721c24; }
-    .checkout-btn { width: 100%; padding: 1rem; background: #ff6a00; color: white; border: none; border-radius: 4px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
-    .checkout-btn:hover { background: #e65f00; }
-    .empty-cart { text-align: center; padding: 4rem 0; }
-    .empty-cart i { font-size: 5rem; color: #ccc; margin-bottom: 1.5rem; }
-    .cross-sell { background: white; padding: 2rem; border-radius: 8px; margin-top: 2rem; }
-    .cross-sell-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.5rem; }
-    .stock-warning { color: #dc3545; font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; }
-    .stock-ok { color: #28a745; font-size: 0.85rem; }
+    /* ========================================
+       PREMIUM CART STYLES (Orange Theme)
+       ======================================== */
+    
+    :root {
+        --cart-font: 'Inter', system-ui, -apple-system, sans-serif;
+        --cart-bg: #f5f5f5;
+        --cart-text: #212121;
+        --cart-text-light: #757575;
+        --cart-border: #eff0f5;
+        --cart-primary: #6706f8ff; /* Daraz Orange */
+        --cart-link: #1a9cb7;
+    }
+
+    body {
+        background-color: var(--cart-bg);
+        font-family: var(--cart-font);
+    }
+
+    .cart-page-wrapper {
+        max-width: 1188px;
+        margin: 20px auto;
+        padding: 0;
+        color: var(--cart-text);
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .cart-items-column {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cart-summary-column {
+        width: 380px;
+        flex-shrink: 0;
+    }
+
+    /* Selection Header */
+    .selection-header {
+        background: #fff;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--cart-text-light);
+        border-radius: 0;
+    }
+
+    .select-all-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: var(--cart-text-light);
+    }
+
+    /* Custom Checkbox */
+    .custom-checkbox {
+        width: 18px;
+        height: 18px;
+        border: 1px solid #999;
+        background: #fff;
+        border-radius: 2px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        appearance: none;
+        -webkit-appearance: none;
+        position: relative;
+    }
+    .custom-checkbox:checked {
+        background-color: var(--cart-primary);
+        border-color: var(--cart-primary);
+    }
+    .custom-checkbox:checked::after {
+        content: '✔';
+        font-size: 12px;
+        color: white;
+        line-height: 1;
+    }
+
+    .delete-btn {
+        color: var(--cart-text-light);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 600;
+        border: none;
+        background: none;
+    }
+    .delete-btn:hover { color: var(--cart-primary); }
+
+    /* Shop Group */
+    .shop-group {
+        background: #fff;
+        margin-bottom: 12px;
+        border-radius: 0;
+    }
+
+    .shop-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--cart-border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #212121;
+    }
+    .shop-header a { text-decoration: none; color: #212121; font-weight: 500;}
+    .shop-header a:hover { text-decoration: underline; }
+
+    /* Cart Item */
+    .cart-item {
+        padding: 16px;
+        border-bottom: 1px solid var(--cart-border);
+        display: flex;
+        gap: 16px;
+    }
+    .cart-item:last-child { border-bottom: none; }
+
+    .item-checkbox {
+        padding-top: 4px; /* Align with image top */
+    }
+
+    .product-thumb {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+    }
+
+    .item-details {
+        flex: 1;
+    }
+
+    .product-title {
+        font-size: 14px !important;
+        line-height: 20px !important;
+        margin-bottom: 6px;
+        color: #212121;
+        max-width: 400px;
+        font-weight: 500;
+        display: block;
+    }
+    .product-title a { color: inherit; text-decoration: none; }
+    .product-title a:hover { color: var(--cart-primary); }
+
+    .product-meta {
+        font-size: 12px;
+        color: var(--cart-text-light);
+        margin-bottom: 4px;
+    }
+
+    .price-original {
+        text-decoration: line-through;
+        color: var(--cart-text-light);
+        font-size: 12px;
+        margin-right: 4px;
+    }
+
+    .price-current {
+        color: var(--cart-primary);
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    .item-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 8px;
+    }
+
+    .action-icon {
+        color: var(--cart-text-light);
+        font-size: 16px;
+        cursor: pointer;
+        transition: color 0.2s;
+        background: none;
+        border: none;
+        padding: 0;
+    }
+    .action-icon:hover { color: var(--cart-primary); }
+
+    /* Quantity Control */
+    .qty-control {
+        display: flex;
+        align-items: center;
+    }
+    .qty-btn {
+        width: 28px;
+        height: 28px;
+        background: #eff0f5;
+        border: none;
+        font-size: 16px;
+        color: #9e9e9e;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+    .qty-btn:hover { background: #e0e0e0; color: #757575; }
+    
+    .qty-display {
+        width: 40px;
+        height: 28px;
+        border: none;
+        text-align: center;
+        font-size: 14px;
+        color: #212121;
+    }
+
+    /* Summary Card */
+    .summary-card {
+        background: #fff;
+        padding: 12px;
+    }
+
+    .bg-white { background: #fff; }
+
+    .summary-title {
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 12px;
+        color: #212121;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: #757575;
+    }
+    .summary-row.total {
+        margin-top: 16px;
+        color: #212121;
+        font-size: 18px;
+    }
+    .total-amount {
+        color: var(--cart-primary);
+        font-weight: 500;
+    }
+
+    .checkout-btn {
+        display: block;
+        width: 100%;
+        background-color: var(--cart-primary);
+        color: white;
+        text-align: center;
+        padding: 12px 0;
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+        border: none;
+        border-radius: 2px;
+        text-decoration: none;
+        margin-top: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .checkout-btn:hover {
+        background-color: #d34b05;
+    }
+
+    .coupon-input-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 20px;
+    }
+    .coupon-input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #eff0f5;
+        border-radius: 2px;
+        font-size: 14px;
+    }
+    .coupon-btn {
+        background: #1a9cb7;
+        color: white;
+        border: none;
+        padding: 0 20px;
+        font-weight: 500;
+        font-size: 14px;
+        cursor: pointer;
+        border-radius: 2px;
+    }
+
+    /* Responsive */
+    @@media (max-width: 991px) {
+        .cart-page-wrapper {
+            flex-direction: column;
+            padding: 0 10px;
+        }
+        .cart-summary-column {
+            width: 100%;
+        }
+    }
 </style>
 
-<div class="cart-page">
-    <div class="container">
-        @if (!Model.Cart.Items.Any())
-        {
-            <div class="empty-cart">
-                <i class="bi bi-cart-x"></i>
-                <h2 class="sparkle-section-title mb-2">@(isBangla ? "আপনার কার্ট খালি" : "Your cart is empty")</h2>
-                <p class="sparkle-section-subtitle mb-3">@(isBangla ? "কিছু পণ্য যোগ করে কেনাকাটা শুরু করুন!" : "Add some products to get started!")</p>
-                <a href="/" class="btn btn-primary btn-lg mt-3">@(isBangla ? "কেনাকাটা চালিয়ে যান" : "Continue Shopping")</a>
-            </div>
-        }
-        else
-        {
-            <div class="mb-4">
-                <h1 class="sparkle-section-title mb-1">@(isBangla ? "শপিং কার্ট" : "Shopping Cart")</h1>
-                <p class="sparkle-section-subtitle mb-0">@Model.Cart.Items.Count @(isBangla ? "টি আইটেম" : "item(s)")</p>
-            </div>
+<div class="cart-page-wrapper">
+    
+    @if (!Model.Cart.Items.Any())
+    {
+         <div class="cart-items-column bg-white" style="text-align: center; padding: 60px 20px;">
+            <img src="https://via.placeholder.com/150/f5f5f5/cccccc?text=Empty+Cart" alt="Empty Cart" style="width: 100px; margin-bottom: 20px; opacity: 0.5;">
+            <p style="font-size: 14px; color: #757575; margin-bottom: 16px;">There are no items in this cart</p>
+            <a href="/" style="display: inline-block; padding: 10px 40px; border: 1px solid var(--cart-primary); color: var(--cart-primary); text-transform: uppercase; font-weight: 500; text-decoration: none; font-size: 14px;">Continue Shopping</a>
+        </div>
+    }
+    else
+    {
+        <!-- Left Column: Items -->
+        <div class="cart-items-column">
             
-            <div class="row">
-                <!-- Cart Items -->
-                <div class="col-lg-8">
-                    @foreach (var item in Model.Cart.Items)
+            <!-- Global Select All -->
+            <div class="selection-header">
+                <label class="select-all-wrap">
+                    <input type="checkbox" class="custom-checkbox" checked>
+                    SELECT ALL (@Model.Cart.Items.Sum(i => i.Quantity) ITEM(S))
+                </label>
+                <button class="delete-btn">
+                    <i class="bi bi-trash"></i> DELETE
+                </button>
+            </div>
+
+            <!-- Group items by Seller -->
+            @{
+                var groups = Model.Cart.Items.GroupBy(i => i.ProductVariant.Product.Seller).ToList();
+            }
+
+            @foreach (var group in groups)
+            {
+                var seller = group.Key;
+                var shopName = seller?.ShopName ?? "Sparkle Official";
+                var shopId = seller?.Id ?? 0;
+
+                <div class="shop-group">
+                    <div class="shop-header">
+                        <input type="checkbox" class="custom-checkbox" checked>
+                        <i class="bi bi-shop" style="color: #757575;"></i>
+                        <a href="/shop/@shopId">@shopName</a>
+                        <i class="bi bi-chevron-right" style="font-size: 12px; color: #757575;"></i>
+                    </div>
+
+                    @foreach (var item in group)
                     {
                         var product = item.ProductVariant.Product;
                         var variant = item.ProductVariant;
-                        var imageUrl = product.Images?.FirstOrDefault()?.Url ?? "https://via.placeholder.com/120";
+                        var imageUrl = product.Images?.FirstOrDefault()?.Url ?? "https://via.placeholder.com/150";
                         var lineTotal = item.UnitPrice * item.Quantity;
                         
-                        <div class="cart-item" data-item-id="@item.Id" data-variant-id="@variant.Id">
-                            <img src="@imageUrl" alt="@product.Title" class="cart-item-image">
-                            <div class="cart-item-details">
-                                <a href="/product/@product.Id" class="cart-item-title">@product.Title</a>
-                                <div class="cart-item-variant">
-                                    @if (!string.IsNullOrEmpty(variant.Color))
-                                    {
-                                        <span>Color: @variant.Color</span>
-                                    }
-                                    @if (!string.IsNullOrEmpty(variant.Size))
-                                    {
-                                        <span> | Size: @variant.Size</span>
-                                    }
+                        // Fake discount data for visuals
+                        var fakeOriginalPrice = item.UnitPrice * 1.2m; 
+                        var discountPercent = "-20%";
+
+                        <div class="cart-item">
+                            <div class="item-checkbox">
+                                <input type="checkbox" class="custom-checkbox" checked>
+                            </div>
+                            
+                            <img src="@imageUrl" alt="@product.Title" class="product-thumb">
+                            
+                            <div class="item-details">
+                                <h3 class="product-title"><a href="/product/@product.Id">@product.Title</a></h3>
+                                <div class="product-meta">
+                                    @if (!string.IsNullOrEmpty(variant.Color)) { <span>Color Family: @variant.Color, </span> }
+                                    @if (!string.IsNullOrEmpty(variant.Size)) { <span>Size: @variant.Size</span> }
                                 </div>
-                                <div class="cart-item-price">
-                                    ৳ @lineTotal.ToString("N2")
-                                    <span class="text-muted" style="font-size: 0.85rem; font-weight: 400;">
-                                        (৳ @item.UnitPrice.ToString("N2") × @item.Quantity)
-                                    </span>
+                                <div class="product-brand" style="font-size: 12px; color: #757575; margin-bottom: 8px;">
+                                    Brand: No Brand
                                 </div>
-                                <div class="stock-status">
-                                    @if (variant.Stock < item.Quantity)
-                                    {
-                                        <div class="stock-warning">
-                                            <i class="bi bi-exclamation-triangle-fill"></i>
-                                            Only @variant.Stock left in stock
-                                        </div>
-                                    }
-                                    else if (variant.Stock <= 10)
-                                    {
-                                        <div class="stock-warning">Low stock: @variant.Stock remaining</div>
-                                    }
-                                    else
-                                    {
-                                        <div class="stock-ok"><i class="bi bi-check-circle-fill"></i> In Stock</div>
-                                    }
+                            </div>
+
+                            <div class="item-pricing" style="text-align: right; min-width: 100px;">
+                                <div class="price-current">৳ @item.UnitPrice.ToString("N0")</div>
+                                <div style="margin-bottom: 8px;">
+                                    <span class="price-original">৳ @fakeOriginalPrice.ToString("N0")</span>
+                                    <span style="font-size: 12px; color: #212121;">@discountPercent</span>
                                 </div>
-                                <div class="cart-item-actions">
-                                    <form method="post" action="/cart/update" class="quantity-form">
-                                        <input type="hidden" name="itemId" value="@item.Id">
-                                        <div class="quantity-control">
-                                            <button type="button" class="qty-minus" onclick="updateQuantity(@item.Id, -1)">−</button>
-                                            <input type="number" name="quantity" value="@item.Quantity" min="1" max="@variant.Stock" readonly>
-                                            <button type="button" class="qty-plus" onclick="updateQuantity(@item.Id, 1)">+</button>
-                                        </div>
-                                    </form>
-                                    <form method="post" action="/cart/remove">
-                                        <input type="hidden" name="itemId" value="@item.Id">
-                                        <button type="submit" class="remove-btn btn btn-link">
-                                            <i class="bi bi-trash"></i> @(isBangla ? "মুছে ফেলুন" : "Remove")
-                                        </button>
-                                    </form>
+                                
+                                <div style="display: flex; gap: 12px; justify-content: flex-end; align-items: center;">
+                                    <div class="item-actions">
+                                        <form method="post" action="/cart/remove" style="display:inline;">
+                                            <input type="hidden" name="itemId" value="@item.Id">
+                                            <button type="submit" class="action-icon" title="Remove"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                        <button class="action-icon" title="Add to Wishlist"><i class="bi bi-heart"></i></button>
+                                    </div>
+
+                                    <div class="qty-control">
+                                        <form method="post" action="/cart/update" id="form-update-@item.Id" style="display: flex;">
+                                            <input type="hidden" name="itemId" value="@item.Id" />
+                                            <button type="button" class="qty-btn" onclick="updateQty(@item.Id, -1)">−</button>
+                                            <input type="text" name="quantity" class="qty-display" value="@item.Quantity" readonly>
+                                            <button type="button" class="qty-btn" onclick="updateQty(@item.Id, 1)">+</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     }
                 </div>
+            }
 
-                <!-- Order Summary -->
-                <div class="col-lg-4">
-                    <div class="summary-box">
-                        <h3 class="sparkle-section-title mb-3">@(isBangla ? "অর্ডার সারাংশ" : "Order Summary")</h3>
-                        <div class="summary-row">
-                            <span>@(isBangla ? "সাবটোটাল" : "Subtotal")</span>
-                            <span class="subtotal-amount">৳ @Model.Subtotal.ToString("N2")</span>
-                        </div>
-                        <div class="summary-row discount-row" style="display: none;">
-                            <span>@(isBangla ? "ডিসকাউন্ট" : "Discount")</span>
-                            <span class="discount-amount text-success">−৳0.00</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>@(isBangla ? "শিপিং" : "Shipping")</span>
-                            <span class="text-muted" style="font-size: 0.9rem;">@(isBangla ? "চেকআউটে হিসাব করা হবে" : "Calculated at checkout")</span>
-                        </div>
-                        <div class="summary-row summary-total">
-                            <span>@(isBangla ? "টোটাল" : "Total")</span>
-                            <span class="total-amount">৳ @Model.Subtotal.ToString("N2")</span>
-                        </div>
+        </div>
 
-                        <!-- Promo Code -->
-                        <div class="promo-section">
-                            <div class="promo-applied" style="display: none;">
-                                <span>
-                                    <i class="bi bi-tag-fill"></i>
-                                    <span class="promo-code-name"></span> @(isBangla ? "প্রযোজ্য হয়েছে" : "applied")
-                                </span>
-                                <span class="promo-remove" onclick="removePromo()">
-                                    <i class="bi bi-x-lg"></i>
-                                </span>
-                            </div>
-                            <div class="promo-input-group">
-                                <input type="text" id="promoCode" placeholder="@(isBangla ? "প্রোমো কোড লিখুন" : "Enter promo code")" class="promo-input">
-                                <button onclick="applyPromo()" class="apply-promo-btn">@(isBangla ? "প্রয়োগ করুন" : "Apply")</button>
-                            </div>
-                            <small class="text-muted">@(isBangla ? "ট্রাই করুন: WELCOME10, SAVE50, FLASH20" : "Try: WELCOME10, SAVE50, FLASH20")</small>
-                        </div>
-
-                        <button onclick="proceedToCheckout()" class="checkout-btn">
-                            <i class="bi bi-lock-fill"></i> @(isBangla ? "চেকআউটে যান" : "Proceed to Checkout")
-                        </button>
-
-                        <div class="text-center mt-3">
-                            <a href="/" class="text-muted">
-                                <i class="bi bi-arrow-left"></i> @(isBangla ? "কেনাকাটা চালিয়ে যান" : "Continue Shopping")
-                            </a>
-                        </div>
-                    </div>
+        <!-- Right Column: Summary -->
+        <div class="cart-summary-column">
+            <div class="summary-card">
+                <div style="font-size: 14px; color: #757575; margin-bottom: 4px;">Location</div>
+                <div style="font-size: 12px; color: #212121; margin-bottom: 20px; display: flex; align-items: center; gap: 6px;">
+                    <i class="bi bi-geo-alt"></i> Add Shipping Address
                 </div>
+
+                <h3 class="summary-title">Order Summary</h3>
+                <div class="summary-row">
+                    <span>Subtotal (@Model.Cart.Items.Sum(i => i.Quantity) items)</span>
+                    <span>৳ @Model.Subtotal.ToString("N0")</span>
+                </div>
+                <div class="summary-row">
+                    <span>Shipping Fee</span>
+                    <span>৳ 60</span>
+                </div>
+
+                <div class="coupon-input-group">
+                    <input type="text" class="coupon-input" placeholder="Enter Voucher Code">
+                    <button class="coupon-btn">APPLY</button>
+                </div>
+
+                <div class="summary-row total">
+                    <span>Total</span>
+                    <span class="total-amount">৳ @((Model.Subtotal + 60).ToString("N0"))</span>
+                </div>
+
+                <button onclick="window.location.href='/checkout'" class="checkout-btn">
+                    PROCEED TO CHECKOUT (@Model.Cart.Items.Sum(i => i.Quantity))
+                </button>
             </div>
-        }
-    </div>
+        </div>
+    }
 </div>
 
 <script>
-    let appliedPromo = null;
-    const originalSubtotal = @Model.Subtotal;
-
-    function updateQuantity(itemId, delta) {
-        const itemDiv = document.querySelector(`[data-item-id="${itemId}"]`);
-        const input = itemDiv.querySelector('input[name="quantity"]');
-        const currentQty = parseInt(input.value);
-        const maxQty = parseInt(input.max);
-        const newQty = Math.max(1, Math.min(maxQty, currentQty + delta));
-        
-        if (newQty !== currentQty) {
-            input.value = newQty;
-            const form = itemDiv.querySelector('.quantity-form');
-            form.submit();
-        }
-    }
-
-    async function applyPromo() {
-        const promoInput = document.getElementById('promoCode');
-        const code = promoInput.value.trim().toUpperCase();
-        
-        if (!code) {
-            alert('Please enter a promo code');
-            return;
-        }
-
-        // Mock promo codes validation
-        const promoCodes = {
-            'WELCOME10': { discount: 10, type: 'percentage' },
-            'SAVE50': { discount: 50, type: 'fixed' },
-            'FLASH20': { discount: 20, type: 'percentage' }
-        };
-
-        const promo = promoCodes[code];
-        if (!promo) {
-            alert('Invalid promo code');
-            return;
-        }
-
-        appliedPromo = { code, ...promo };
-        updateSummary();
-        
-        document.querySelector('.promo-applied').style.display = 'flex';
-        document.querySelector('.promo-code-name').textContent = code;
-        document.querySelector('.promo-input-group').style.display = 'none';
-        promoInput.value = '';
-    }
-
-    function removePromo() {
-        appliedPromo = null;
-        updateSummary();
-        document.querySelector('.promo-applied').style.display = 'none';
-        document.querySelector('.promo-input-group').style.display = 'flex';
-    }
-
-    function updateSummary() {
-        let subtotal = originalSubtotal;
-        let discount = 0;
-
-        if (appliedPromo) {
-            if (appliedPromo.type === 'percentage') {
-                discount = subtotal * (appliedPromo.discount / 100);
-            } else {
-                discount = appliedPromo.discount;
-            }
-        }
-
-        const total = subtotal - discount;
-
-        document.querySelector('.subtotal-amount').textContent = `৳${subtotal.toFixed(2)}`;
-        document.querySelector('.discount-amount').textContent = `−৳${discount.toFixed(2)}`;
-        document.querySelector('.total-amount').textContent = `৳${total.toFixed(2)}`;
-        
-        const discountRow = document.querySelector('.discount-row');
-        discountRow.style.display = discount > 0 ? 'flex' : 'none';
-    }
-
-    function proceedToCheckout() {
-        if (appliedPromo) {
-            sessionStorage.setItem('appliedPromo', JSON.stringify(appliedPromo));
-        }
-        window.location.href = '/checkout';
+    function updateQty(itemId, change) {
+        const form = document.getElementById('form-update-' + itemId);
+        const input = form.querySelector('input[name="quantity"]');
+        let val = parseInt(input.value);
+        val += change;
+        if (val < 1) val = 1; 
+        input.value = val;
+        form.submit();
     }
 </script>

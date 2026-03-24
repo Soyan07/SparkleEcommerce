@@ -1,0 +1,185 @@
+@model Sparkle.Api.Controllers.ProfileController.ProfileViewModel
+@{
+    ViewData["Title"] = "Edit Profile";
+    Layout = "~/Views/Shared/_ProfileLayout.cshtml";
+}
+
+<div class="tw-bg-white tw-rounded-2xl tw-border tw-border-slate-100 tw-overflow-hidden tw-shadow-sm">
+    <!-- Header -->
+    <div class="tw-px-6 tw-py-4 tw-border-b tw-border-slate-50 tw-flex tw-items-center tw-gap-4">
+        <a href="/account-info" class="tw-w-9 tw-h-9 tw-rounded-xl tw-bg-slate-50 tw-flex tw-items-center tw-justify-center tw-text-slate-500 hover:tw-bg-slate-100 hover:tw-text-slate-800 tw-transition-all tw-no-underline">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h6 class="tw-font-bold tw-text-slate-900 tw-text-base tw-mb-0">Edit Profile</h6>
+            <p class="tw-text-[11px] tw-text-slate-500 tw-mb-0">Update your personal information and profile picture</p>
+        </div>
+    </div>
+
+    <form method="post" asp-action="Update" asp-controller="Profile" enctype="multipart/form-data" class="tw-p-6" id="profileForm">
+        <!-- Profile Photo Section -->
+        <div class="tw-flex tw-items-center tw-gap-6 tw-p-6 tw-bg-slate-50/50 tw-border tw-border-slate-100 tw-rounded-2xl tw-mb-8">
+            <div class="tw-relative group">
+                <div class="tw-w-20 tw-h-20 tw-rounded-2xl tw-overflow-hidden tw-border-2 tw-border-white tw-shadow-md">
+                    @if (!string.IsNullOrEmpty(Model.ProfilePhotoPath))
+                    {
+                        <img src="@Model.ProfilePhotoPath" class="tw-w-full tw-h-full tw-object-cover" id="previewImg" />
+                    }
+                    else
+                    {
+                        <div class="tw-w-full tw-h-full tw-bg-gradient-to-br tw-from-orange-400 tw-to-orange-600 tw-flex tw-items-center tw-justify-center tw-text-white tw-text-3xl tw-font-bold" id="avatarPlaceholder">
+                            @(Model.FullName?.Substring(0, 1).ToUpper() ?? "U")
+                        </div>
+                        <img src="" class="tw-w-full tw-h-full tw-object-cover tw-hidden" id="previewImg" />
+                    }
+                </div>
+                <label for="ProfilePhoto" class="tw-absolute -tw-bottom-2 -tw-right-2 tw-w-8 tw-h-8 tw-bg-orange-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-white tw-cursor-pointer hover:tw-bg-orange-600 tw-transition-all tw-shadow-lg tw-shadow-orange-500/20 tw-border-2 tw-border-white">
+                    <i class="bi bi-camera-fill tw-text-xs"></i>
+                </label>
+            </div>
+            <div>
+                <h6 class="tw-font-bold tw-text-slate-900 tw-text-sm tw-mb-1">Your Profile Photo</h6>
+                <p class="tw-text-[11px] tw-text-slate-500 tw-mb-3">Recommended: Square image, max 800KB (JPG, PNG)</p>
+                <div class="tw-flex tw-gap-2.5">
+                    <label for="ProfilePhoto" class="tw-px-4 tw-py-2 tw-bg-white tw-border tw-border-slate-200 tw-rounded-xl tw-text-xs tw-font-bold tw-text-slate-700 tw-cursor-pointer hover:tw-border-orange-500 hover:tw-text-orange-500 tw-transition-all">
+                        <i class="bi bi-upload tw-mr-1.5"></i> Change Photo
+                    </label>
+                    @if (!string.IsNullOrEmpty(Model.ProfilePhotoPath))
+                    {
+                        <button type="button" onclick="deletePhoto()" class="tw-w-9 tw-h-9 tw-flex tw-items-center tw-justify-center tw-bg-white tw-border tw-border-red-100 tw-rounded-xl tw-text-red-500 hover:tw-bg-red-50 tw-transition-all">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    }
+                </div>
+                <input type="file" asp-for="ProfilePhoto" id="ProfilePhoto" class="tw-hidden" onchange="previewFile()" accept="image/*" />
+            </div>
+        </div>
+
+        <!-- Form Fields -->
+        <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-6">
+            <!-- Full Name -->
+            <div class="tw-space-y-1.5">
+                <label asp-for="FullName" class="tw-block tw-text-xs tw-font-bold tw-text-slate-700 tw-uppercase tw-tracking-wider tw-ml-1">
+                    Full Name <span class="tw-text-red-500">*</span>
+                </label>
+                <div class="tw-relative">
+                    <input asp-for="FullName" class="tw-w-full tw-px-4 tw-py-3 tw-pl-11 tw-bg-white tw-border tw-border-slate-200 tw-rounded-xl tw-text-slate-900 tw-text-sm focus:tw-border-orange-500 focus:tw-ring-4 focus:tw-ring-orange-500/5 tw-transition-all tw-outline-none" placeholder="Enter your full name" required />
+                    <span class="tw-absolute tw-top-1/2 tw-left-4 -tw-translate-y-1/2 tw-text-slate-400 tw-text-sm">
+                        <i class="bi bi-person"></i>
+                    </span>
+                </div>
+                <span asp-validation-for="FullName" class="tw-text-[10px] tw-text-red-500 tw-font-semibold tw-ml-1"></span>
+            </div>
+
+            <!-- Email (Read-only) -->
+            <div class="tw-space-y-1.5">
+                <label asp-for="Email" class="tw-block tw-text-xs tw-font-bold tw-text-slate-700 tw-uppercase tw-tracking-wider tw-ml-1">
+                    Email Address
+                </label>
+                <div class="tw-relative">
+                    <input asp-for="Email" class="tw-w-full tw-px-4 tw-py-3 tw-pl-11 tw-bg-slate-50 tw-border tw-border-slate-200 tw-rounded-xl tw-text-slate-500 tw-text-sm tw-cursor-not-allowed" readonly />
+                    <span class="tw-absolute tw-top-1/2 tw-left-4 -tw-translate-y-1/2 tw-text-slate-400 tw-text-sm">
+                        <i class="bi bi-envelope"></i>
+                    </span>
+                    <span class="tw-absolute tw-top-1/2 tw-right-4 -tw-translate-y-1/2 tw-bg-emerald-50 tw-text-emerald-600 tw-text-[10px] tw-px-2 tw-py-1 tw-rounded-lg tw-font-bold tw-flex tw-items-center tw-gap-1">
+                        <i class="bi bi-patch-check-fill"></i> Verified
+                    </span>
+                </div>
+            </div>
+
+            <!-- Phone Number -->
+            <div class="tw-space-y-1.5">
+                <label asp-for="ContactPhone" class="tw-block tw-text-xs tw-font-bold tw-text-slate-700 tw-uppercase tw-tracking-wider tw-ml-1">
+                    Phone Number
+                </label>
+                <div class="tw-relative">
+                    <input asp-for="ContactPhone" class="tw-w-full tw-px-4 tw-py-3 tw-pl-11 tw-bg-white tw-border tw-border-slate-200 tw-rounded-xl tw-text-slate-900 tw-text-sm focus:tw-border-orange-500 focus:tw-ring-4 focus:tw-ring-orange-500/5 tw-transition-all tw-outline-none" placeholder="01XXXXXXXXX" />
+                    <span class="tw-absolute tw-top-1/2 tw-left-4 -tw-translate-y-1/2 tw-text-slate-400 tw-text-sm">
+                        <i class="bi bi-phone"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Date of Birth -->
+            <div class="tw-space-y-1.5">
+                <label asp-for="DateOfBirth" class="tw-block tw-text-xs tw-font-bold tw-text-slate-700 tw-uppercase tw-tracking-wider tw-ml-1">
+                    Date of Birth
+                </label>
+                <div class="tw-relative">
+                    <input asp-for="DateOfBirth" type="date" class="tw-w-full tw-px-4 tw-py-3 tw-pl-11 tw-bg-white tw-border tw-border-slate-200 tw-rounded-xl tw-text-slate-900 tw-text-sm focus:tw-border-orange-500 focus:tw-ring-4 focus:tw-ring-orange-500/5 tw-transition-all tw-outline-none" />
+                    <span class="tw-absolute tw-top-1/2 tw-left-4 -tw-translate-y-1/2 tw-text-slate-400 tw-text-sm">
+                        <i class="bi bi-calendar3"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="tw-flex tw-justify-end tw-gap-3 tw-mt-10 tw-pt-6 tw-border-t tw-border-slate-50">
+            <a href="/account-info" class="tw-px-6 tw-py-3 tw-bg-slate-50 tw-rounded-xl tw-text-xs tw-font-bold tw-text-slate-600 hover:tw-bg-slate-100 hover:tw-text-slate-900 tw-transition-all tw-no-underline">
+                Discard Changes
+            </a>
+            <button type="submit" id="submitBtn" class="tw-px-8 tw-py-3 tw-bg-orange-500 tw-rounded-xl tw-text-xs tw-font-bold tw-text-white hover:tw-bg-orange-600 tw-transition-all tw-shadow-lg tw-shadow-orange-500/20 tw-flex tw-items-center tw-gap-2 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed">
+                <i class="bi bi-check2-circle" id="btnIcon"></i>
+                <span id="btnText">Save Profile</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function previewFile() {
+        const preview = document.querySelector('#previewImg');
+        const placeholder = document.querySelector('#avatarPlaceholder');
+        const file = document.querySelector('input[type=file]').files[0];
+        const reader = new FileReader();
+        reader.addEventListener("load", function () {
+            preview.src = reader.result;
+            preview.classList.remove('tw-hidden');
+            if (placeholder) placeholder.classList.add('tw-hidden');
+        }, false);
+        if (file) { reader.readAsDataURL(file); }
+    }
+
+    function deletePhoto() {
+        if (!confirm('Are you sure you want to remove your profile photo?')) return;
+        
+        const deleteBtn = event.currentTarget;
+        const originalContent = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class="bi bi-arrow-repeat tw-animate-spin"></i>';
+        deleteBtn.disabled = true;
+
+        fetch('/account-info/delete-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+            .then(res => res.json())
+            .then(data => { 
+                if (data.success) {
+                    location.reload();
+                } else {
+                    deleteBtn.innerHTML = originalContent;
+                    deleteBtn.disabled = false;
+                    showToast('Failed to remove photo. Please try again.', 'error');
+                }
+            })
+            .catch(() => {
+                deleteBtn.innerHTML = originalContent;
+                deleteBtn.disabled = false;
+                showToast('Something went wrong. Please try again.', 'error');
+            });
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+        if(!this.checkValidity()) return;
+        
+        const btn = document.getElementById('submitBtn');
+        const icon = document.getElementById('btnIcon');
+        const text = document.getElementById('btnText');
+        
+        btn.disabled = true;
+        icon.className = 'bi bi-arrow-repeat tw-animate-spin';
+        text.textContent = 'Saving Profile...';
+    });
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

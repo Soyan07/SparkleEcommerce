@@ -4,6 +4,7 @@
     Layout = null;
     var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
     var isBangla = langCookie == "bn";
+    var siteTitle = await SettingsService.GetValueAsync("SiteTitle", "Sparkle");
 }
 
 <!DOCTYPE html>
@@ -11,7 +12,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(isBangla ? "অ্যাকাউন্ট তৈরি করুন - স্পার্কল" : "Create Account - Sparkle")</title>
+    <title>@(isBangla ? $"অ্যাকাউন্ট তৈরি করুন - {siteTitle}" : $"Create Account - {siteTitle}")</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -56,7 +57,7 @@
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1100px;
+            max-width: min(1100px, 95vw); /* Flexible max-width */
             animation: slideUp 0.5s ease-out;
         }
 
@@ -72,16 +73,16 @@
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
             overflow: hidden; 
             display: grid; 
-            grid-template-columns: 400px 1fr;
-            min-height: 700px;
-            max-width: 1000px; /* Reduced by ~10% */
-            margin: 0 auto; /* Ensure centering */
+            grid-template-columns: 340px 1fr;
+            min-height: 683px; /* Matched Seller Reg */
+            max-width: 830px; /* Reduced by another 3% */
+            margin: 0 auto;
         }
 
         /* Left Side */
         .register-left { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            padding: 3rem; 
+            padding: 2.5rem; /* Matched Seller Reg */
             color: white; 
             display: flex; 
             flex-direction: column; 
@@ -93,16 +94,30 @@
             display: flex;
             align-items: center;
             margin-bottom: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            width: fit-content;
+            
+            /* Glassmorphism Card Style */
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 4px 10px;
+            width: fit-content;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .brand-logo:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
         }
         
         .brand-logo img {
             height: 42px; /* Increased size */
             width: auto;
+            max-width: 100%;
+            object-fit: contain;
         }
 
         .left-center-content {
@@ -129,6 +144,7 @@
         .user-icon-circle img {
             width: 65px;
             height: 65px;
+            max-width: 100%;
             object-fit: contain;
         }
 
@@ -171,14 +187,20 @@
 
         /* Right Side */
         .register-right { 
-            padding: 2.5rem 4rem; 
+            padding: 3rem 2rem 1.5rem 2rem;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             background: #fff;
-            max-height: 90vh;
-            overflow-y: auto;
+            overflow-y: auto; /* Restored scroll */
+            border-radius: 0 20px 20px 0;
+            height: 100%;
         }
+
+        /* Custom Scrollbar - Match Seller */
+        .register-right::-webkit-scrollbar { width: 8px; }
+        .register-right::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .register-right::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%); border-radius: 10px; }
+        .register-right::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #115e59 0%, #0f766e 100%); }
 
         .form-header {
             margin-bottom: 1.25rem;
@@ -197,7 +219,7 @@
             margin-bottom: 0;
         }
 
-        .form-group { margin-bottom: 1rem; }
+        .form-group { margin-bottom: 0.75rem; }
         
         .form-label { 
             font-size: 0.9rem; 
@@ -227,6 +249,13 @@
 
         .form-control::placeholder { color: #94a3b8; }
 
+        /* Hide browser's built-in password reveal icon */
+        input::-ms-reveal,
+        input::-ms-clear,
+        input::-webkit-credentials-auto-fill-button {
+            display: none !important;
+        }
+
         .password-wrapper { position: relative; }
         
         .password-toggle { 
@@ -241,12 +270,37 @@
         .password-toggle:hover { color: var(--text-dark); }
 
         .helper-text {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-light);
-            margin-top: 0.25rem;
-            display: block;
+            margin-top: 0.15rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
+        .strength-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: none;
+        }
+        .strength-badge.weak {
+            display: inline;
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .strength-badge.medium {
+            display: inline;
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .strength-badge.strong {
+            display: inline;
+            background: #d1fae5;
+            color: #059669;
+        }
         .btn-primary { 
             background: #5865F2; /* Matching the blue-ish purple from photo */
             border: none; 
@@ -307,12 +361,66 @@
             color: var(--text-dark); 
         }
 
-        /* Responsive */
-        @@media (max-width: 900px) {
-            .register-container { grid-template-columns: 1fr; max-width: 500px; min-height: auto; }
+        /* Responsive Design - Progressive Enhancement */
+        
+        /* Laptop (1200px - 1439px) - Slightly scale down */
+        @@media (max-width: 1439px) and (min-width: 1200px) {
+            .auth-wrapper { max-width: 900px; }
+            .register-left { padding: 2rem 2.5rem 2.5rem 2.5rem; }
+            .register-right { padding: 1.5rem 2rem; }
+        }
+        
+        /* Small Laptop (992px - 1199px) - More condensed */
+        @@media (max-width: 1199px) and (min-width: 992px) {
+            .auth-wrapper { max-width: 800px; }
+            .register-container { grid-template-columns: 350px 1fr; }
+            .register-left { padding: 2rem; }
+            .register-right { padding: 1.5rem 1.5rem; }
+            .register-left h1 { font-size: 2.25rem; }
+        }
+        
+        /* Tablet (768px - 900px) - Hide left panel */
+        @@media (max-width: 900px) and (min-width: 768px) {
+            .register-container { 
+                grid-template-columns: 1fr; 
+                max-width: 600px; 
+                min-height: auto; 
+            }
             .register-left { display: none; }
-            .register-right { padding: 2rem; }
-            .nav-back { color: var(--text-dark); background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+            .register-right { padding: 2.5rem 2rem; }
+            .nav-back { 
+                color: var(--text-dark); 
+                background: white; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            }
+        }
+        
+        /* Mobile (max-width: 767px) - Full mobile optimization */
+        @@media (max-width: 767px) {
+            body { padding: 1rem; }
+            .register-container { 
+                grid-template-columns: 1fr; 
+                max-width: 100%; 
+                min-height: auto;
+                border-radius: 16px;
+            }
+            .register-left { display: none; }
+            .register-right { 
+                padding: 2rem 1.5rem; 
+                max-height: none; 
+            }
+            .form-header h2 { font-size: 1.75rem; }
+            .form-group { margin-bottom: 1rem; }
+            .row .col-md-6 { 
+                margin-bottom: 1rem; 
+            }
+            .nav-back { 
+                color: var(--text-dark); 
+                background: white; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                top: 1rem;
+                left: 1rem;
+            }
         }
     </style>
 </head>
@@ -324,7 +432,7 @@
             <!-- Left Side -->
             <div class="register-left">
                 <div class="brand-logo">
-                    <img src="/images/logo.png" alt="Sparkle" />
+                    <img src="~/images/logo.png" alt="@siteTitle" asp-append-version="true" />
                 </div>
 
                 <div class="left-center-content">
@@ -353,13 +461,14 @@
 
 
                 <form method="post" asp-action="RegisterUser" asp-controller="Auth" id="registerForm">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                     <div class="form-group">
-                        <label asp-for="FullName" class="form-label">Full Name</label>
+                        <label asp-for="FullName" class="form-label">Full Name <span class="text-danger">*</span></label>
                         <input asp-for="FullName" type="text" class="form-control" placeholder="Enter your full name" autofocus />
                         <span asp-validation-for="FullName" class="text-danger small"></span>
                     </div>
                     <div class="form-group">
-                        <label asp-for="Email" class="form-label">Email Address</label>
+                        <label asp-for="Email" class="form-label">Email Address <span class="text-danger">*</span></label>
                         <input asp-for="Email" type="email" class="form-control" placeholder="name@example.com" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
@@ -367,31 +476,34 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="ContactPhone" class="form-label">Mobile Number</label>
+                                <label asp-for="ContactPhone" class="form-label">Mobile Number <span class="text-danger">*</span></label>
                                 <input asp-for="ContactPhone" type="tel" class="form-control" placeholder="+880 1XXXXXXXXX" />
                                 <span asp-validation-for="ContactPhone" class="text-danger small"></span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="DateOfBirth" class="form-label">Date of Birth</label>
+                                <label asp-for="DateOfBirth" class="form-label">Date of Birth <span class="text-danger">*</span></label>
                                 <input asp-for="DateOfBirth" type="date" class="form-control" id="dobInput" />
-                                <small class="helper-text">Must be 13+ years old</small>
+
                                 <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label asp-for="Password" class="form-label">Password</label>
+                        <label asp-for="Password" class="form-label">Password <span class="text-danger">*</span></label>
                         <div class="password-wrapper">
                             <input asp-for="Password" type="password" class="form-control" id="password" placeholder="Create a strong password" />
                             <i class="bi bi-eye password-toggle" id="togglePassword"></i>
                         </div>
-                        <small class="helper-text">Use at least 6 characters</small>
+                        <small class="helper-text">
+                            <span>Use 6+ characters with letters & numbers</span>
+                            <span class="strength-badge" id="strengthBadge"></span>
+                        </small>
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
                     <div class="form-group">
-                        <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                        <label asp-for="ConfirmPassword" class="form-label">Confirm Password <span class="text-danger">*</span></label>
                         <div class="password-wrapper">
                             <input asp-for="ConfirmPassword" type="password" class="form-control" id="confirmPassword" placeholder="Re-enter your password" />
                             <i class="bi bi-eye password-toggle" id="toggleConfirmPassword"></i>
@@ -400,6 +512,37 @@
                     </div>
 
                     <button type="submit" class="btn-primary">@(isBangla ? "অ্যাকাউন্ট তৈরি করুন" : "Create Account")</button>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const passInput = document.getElementById('password');
+                            const badge = document.getElementById('strengthBadge');
+                            
+                            passInput.addEventListener('input', function() {
+                                const val = this.value;
+                                badge.className = 'strength-badge';
+                                badge.textContent = '';
+                                
+                                if(val.length === 0) return;
+                                
+                                let strength = 0;
+                                if(val.length >= 6) strength += 35;
+                                if(/\d/.test(val)) strength += 30;
+                                if(/[a-zA-Z]/.test(val)) strength += 35;
+                                
+                                if(strength < 50) {
+                                    badge.classList.add('weak');
+                                    badge.textContent = 'Weak';
+                                } else if (strength < 80) {
+                                    badge.classList.add('medium');
+                                    badge.textContent = 'Medium';
+                                } else {
+                                    badge.classList.add('strong');
+                                    badge.textContent = 'Strong';
+                                }
+                            });
+                        });
+                    </script>
 
                     <div class="bottom-links">
                         @(isBangla ? "আগেই অ্যাকাউন্ট আছে?" : "Already have an account?") <a href="/auth/login">@(isBangla ? "লগইন করুন" : "Login")</a><br>
@@ -430,16 +573,61 @@
         setupPasswordToggle('#togglePassword', '#password');
         setupPasswordToggle('#toggleConfirmPassword', '#confirmPassword');
 
-        (function () {
-            const dobInput = document.getElementById('dobInput');
-            if (!dobInput) return;
-            const today = new Date();
-            const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
-            const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate());
-            function toIso(d) { return d.toISOString().split('T')[0]; }
-            dobInput.max = toIso(maxDate);
-            dobInput.min = toIso(minDate);
-        })();
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('ContactPhone');
+            const emailInput = document.getElementById('Email');
+
+            // Phone Logic
+            if(phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let val = e.target.value.replace(/\D/g, ''); // Numbers only
+                    if (val.startsWith('1')) val = '0' + val;    // Auto-prefix 01
+                    if (val.length > 11) val = val.substring(0, 11); // Max 11
+                    e.target.value = val;
+                });
+
+                phoneInput.addEventListener('blur', function(e) {
+                    const val = e.target.value;
+                    const span = document.querySelector('span[data-valmsg-for="ContactPhone"]');
+                    if (val.length > 0) {
+                        if (!/^01\d{9}$/.test(val)) {
+                            if (span) {
+                                span.textContent = "Invalid phone (must be 01XXXXXXXXX)";
+                                span.className = "text-danger field-validation-error small";
+                            }
+                        } else {
+                            if (span && span.textContent.includes("Invalid phone")) {
+                                span.textContent = "";
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Email Logic
+            if(emailInput) {
+                emailInput.addEventListener('blur', function(e) {
+                    const val = e.target.value;
+                    const span = document.querySelector('span[data-valmsg-for="Email"]');
+                    const emailRegex = /^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                    
+                    if (val.length > 0) {
+                        if (!emailRegex.test(val) || val.toLowerCase().endsWith('.co')) {
+                            if (span) {
+                                span.textContent = "Invalid email format";
+                                span.className = "text-danger field-validation-error small";
+                            }
+                        } else {
+                            if (span && span.textContent === "Invalid email format") {
+                                span.textContent = "";
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+
     </script>
 </body>
 </html>

@@ -448,50 +448,22 @@
             @foreach (var product in Model.Products)
             {
                 var imageUrl = product.Images?.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300?text=No+Image";
-                var discountPrice = product.DiscountPercent.HasValue 
-                    ? product.BasePrice * (1 - product.DiscountPercent.Value / 100) 
-                    : product.BasePrice;
+                // Stock is not typically available/shown in category view previously, passing null to hide it
                 
                 <div class="col">
-                    <div class="product-card" onclick="window.location.href='/home/product/@product.Id'">
-                    <div class="product-image-wrapper">
-                        <img src="@imageUrl" alt="@product.Title" class="product-image" loading="lazy">
-                        
-                        @if (product.DiscountPercent.HasValue && product.DiscountPercent.Value > 0)
-                        {
-                            <span class="product-discount-badge">
-                                <i class="bi bi-lightning-fill"></i> -@product.DiscountPercent.Value%
-                            </span>
-                        }
-                        
-                        @if (product.IsAdminProduct)
-                        {
-                            <span class="product-star-badge">
-                                <i class="bi bi-star-fill"></i>
-                            </span>
-                        }
-                    </div>
-                    
-                    <div class="product-info">
-                        <div class="product-title">@product.Title</div>
-                        <div>
-                            <span class="product-price">৳ @discountPrice.ToString("N0")</span>
-                            @if (product.DiscountPercent.HasValue && product.DiscountPercent.Value > 0)
-                            {
-                                <span class="product-original-price">৳ @product.BasePrice.ToString("N0")</span>
-                            }
-                        </div>
-                        <div class="product-rating">
-                            <span class="stars">
-                                <i class="bi bi-star-fill"></i> @(product.AverageRating > 0 ? product.AverageRating.ToString("F1") : "4.5")
-                            </span>
-                            <span>•</span>
-                            <span class="product-delivery">
-                                <i class="bi bi-truck"></i> @(isBangla ? "ফ্রি ডেলিভারি" : "Free Delivery")
-                            </span>
-                        </div>
-                    </div>
-                    </div>
+                     <partial name="_ProductCard" model="@(new {
+                        Id = product.Id,
+                        Title = product.Title,
+                        ImageUrl = imageUrl,
+                        Price = product.Price, // ViewModel might follow similar structure or calculated
+                        BasePrice = product.BasePrice,
+                        DiscountPercent = product.DiscountPercent ?? 0,
+                        Stock = (int?)null, 
+                        Rating = product.AverageRating,
+                        Reviews = product.TotalReviews,
+                        IsFreeShipping = true, // Category view had "Free Delivery" hardcoded
+                        ConfidenceScore = 0
+                    })" />
                 </div>
             }
         </div>

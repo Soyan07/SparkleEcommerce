@@ -1,0 +1,39 @@
+@{
+    Layout = null;
+    var orderIds = ViewBag.OrderIds;
+    var amount = ViewBag.Amount;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalment Verification</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .info-card { background: white; width: 450px; padding: 40px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .icon { font-size: 50px; margin-bottom: 20px; color: #007bff; }
+        h2 { margin-top: 0; color: #333; }
+        p { color: #666; line-height: 1.5; margin-bottom: 30px; }
+        .btn-proceed { background: #007bff; color: white; border: none; padding: 12px 30px; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-proceed:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <div class="info-card">
+        <div class="icon">📅</div>
+        <h2>Instalment Request</h2>
+        <p>You have selected to pay via Instalment for an amount of <strong>৳ @amount</strong>.</p>
+        <p>You will be redirected to our financing partner portal to complete your tenure selection and document verification.</p>
+        
+        <form action="/payment/process" method="post">
+             <input type="hidden" name="orderIds" value="@orderIds" />
+             <input type="hidden" name="status" value="success" /> <!-- Auto succeed for demo, or change to show flow -->
+             <button type="submit" class="btn-proceed">Proceed to Partner Portal</button>
+        </form>
+    </div>
+
+</body>
+</html>

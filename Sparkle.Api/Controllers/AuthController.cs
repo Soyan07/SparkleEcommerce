@@ -6,7 +6,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Sparkle.Domain.Identity;
-
+using Sparkle.Domain.Orders;
+using Sparkle.Infrastructure;
+using Sparkle.Domain.Sellers;
+using Sparkle.Api.Attributes;
+using Microsoft.EntityFrameworkCore;
+using Sparkle.Api.Models.ViewModels;
 namespace Sparkle.Api.Controllers;
 
 [Route("auth")]
@@ -17,19 +22,161 @@ public class AuthController : Controller
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<AuthController> _logger;
+    private readonly ApplicationDbContext _db;
 
     public AuthController(
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         IWebHostEnvironment environment,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        ApplicationDbContext db)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _roleManager = roleManager;
         _environment = environment;
         _logger = logger;
+        _db = db;
+    }
+
+    [HttpGet("register-seller")]
+    [AllowAnonymous]
+    public IActionResult RegisterSeller()
+    {
+        // Prevent redirect loop: Only redirect if user has Role AND Entity
+        if (User.Identity?.IsAuthenticated == true && User.IsInRole("Seller"))
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var hasSellerEntity = _db.Sellers.Any(s => s.UserId == userId);
+            
+            if (hasSellerEntity)
+            {
+                return RedirectToAction("Index", "Dashboard", new { area = "Seller" });
+            }
+        }
+        return View(new RegisterSellerViewModel());
+    }
+
+    [HttpPost("register-seller")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RegisterSeller(RegisterSellerViewModel model)
+    {
+        if (!ModelState.IsValid) return View(model);
+
+        // Check for duplicate email
+        var existingEmail = await _userManager.FindByEmailAsync(model.Email);
+        if (existingEmail != null)
+        {
+            ModelState.AddModelError(nameof(model.Email), "Email already registered");
+            return View(model);
+        }
+
+        // Normalize and check for duplicate phone number
+        var normalizedPhone = model.ContactPhone?.Trim();
+        if (!string.IsNullOrEmpty(normalizedPhone))
+        {
+            // Remove country code for consistent duplicate check
+            if (normalizedPhone.StartsWith("+880")) normalizedPhone = normalizedPhone.Substring(4);
+            else if (normalizedPhone.StartsWith("880")) normalizedPhone = normalizedPhone.Substring(3);
+            
+            // Ensure it starts with 0 for storage
+            if (!normalizedPhone.StartsWith("0")) normalizedPhone = "0" + normalizedPhone;
+            
+            var existingPhone = await _userManager.Users.AnyAsync(u => u.PhoneNumber == normalizedPhone || u.PhoneNumber == model.ContactPhone);
+            if (existingPhone)
+            {
+                ModelState.AddModelError(nameof(model.ContactPhone), "Phone already registered");
+                return View(model);
+            }
+        }
+
+        var user = new ApplicationUser 
+        { 
+            UserName = model.Email, 
+            Email = model.Email,
+            FullName = model.FullName, 
+            PhoneNumber = normalizedPhone ?? model.ContactPhone,
+            EmailConfirmed = true,
+            IsActive = true,
+            RegisteredAt = DateTime.UtcNow
+        };
+
+        var result = await _userManager.CreateAsync(user, model.Password);
+        if (result.Succeeded)
+        {
+            await _userManager.AddToRoleAsync(user, "Seller");
+            
+            // Create Seller entity
+                // Create Seller entity
+                string description = $"Category: {model.BusinessCategory}";
+                if (!string.IsNullOrEmpty(model.BusinessWebsite))
+                {
+                    description += $" | Website: {model.BusinessWebsite}";
+                }
+
+                // Parse Location from Address (Format: Division, District, Thana, Area | Street)
+                string? city = null;
+                string? district = null;
+                if (!string.IsNullOrEmpty(model.Address))
+                {
+                    var parts = model.Address.Split(',');
+                    if (parts.Length > 0) city = parts[0].Trim();
+                    if (parts.Length > 1) district = parts[1].Trim();
+                }
+
+                var seller = new Seller
+                {
+                    UserId = user.Id,
+                    ShopName = model.BusinessName,
+                    ShopDescription = description,
+                    MobileNumber = normalizedPhone ?? model.ContactPhone,
+                    BusinessAddress = model.Address,
+                    City = city,
+                    District = district,
+                    NidNumber = model.BusinessRegistrationNumber, // Mapping Trade License to NID field
+                    Status = SellerStatus.Pending
+                };
+            _db.Sellers.Add(seller);
+            await _db.SaveChangesAsync();
+
+            // Do NOT sign in the seller automatically.
+            // await _signInManager.SignInAsync(user, isPersistent: false);
+            
+            // Redirect to a confirmation page
+            return RedirectToAction("RegistrationPending", "Auth");
+        }
+
+        foreach (var error in result.Errors)
+        {
+            // Provide user-friendly error messages
+            if (error.Code == "DuplicateEmail" || error.Code == "DuplicateUserName")
+            {
+                ModelState.AddModelError(nameof(model.Email), "Email already registered");
+            }
+            else if (error.Code == "PasswordTooShort")
+            {
+                ModelState.AddModelError(nameof(model.Password), "Minimum 6 characters required");
+            }
+            else if (error.Code == "PasswordRequiresNonAlphanumeric")
+            {
+                ModelState.AddModelError(nameof(model.Password), "Include a special character");
+            }
+            else if (error.Code == "PasswordRequiresDigit")
+            {
+                ModelState.AddModelError(nameof(model.Password), "Include a number");
+            }
+            else if (error.Code == "PasswordRequiresUpper")
+            {
+                ModelState.AddModelError(nameof(model.Password), "Include an uppercase letter");
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+        }
+
+        return View(model);
     }
 
     [HttpGet("login")]
@@ -43,16 +190,27 @@ public class AuthController : Controller
     [AllowAnonymous]
     public async Task<IActionResult> Login(LoginViewModel model, string loginType = "user")
     {
+        _logger.LogInformation($"[Login] Attempt for {model.Email} with type: {loginType}");
+
         if (!ModelState.IsValid)
         {
+            _logger.LogWarning("[Login] ModelState invalid.");
             return View(model);
         }
 
         var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null || !user.IsActive)
+        if (user == null)
         {
-            ModelState.AddModelError(string.Empty, "Invalid credentials or account inactive.");
-            return View(model);
+             _logger.LogWarning("[Login] User not found.");
+             ModelState.AddModelError(string.Empty, "Invalid email or password. Please check your credentials and try again.");
+             return View(model);
+        }
+        
+        if (!user.IsActive)
+        {
+             _logger.LogWarning("[Login] User inactive.");
+             ModelState.AddModelError(string.Empty, "Your account is inactive. Please contact support for assistance.");
+             return View(model);
         }
 
         // Check if login type matches user's actual role
@@ -60,10 +218,55 @@ public class AuthController : Controller
         var isUser = await _userManager.IsInRoleAsync(user, "User");
         var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
 
+        _logger.LogInformation($"[Login] Roles - Seller: {isSeller}, User: {isUser}, Admin: {isAdmin}");
+
+        // Self-healing: If user has a Seller entity but no role, fix it
+        if (loginType == "seller" && !isSeller)
+        {
+             _logger.LogInformation("[Login] Self-healing Seller role...");
+             var sellerEntity = _db.Sellers.FirstOrDefault(s => s.UserId == user.Id);
+             if (sellerEntity != null)
+             {
+                 await _userManager.AddToRoleAsync(user, "Seller");
+                 isSeller = true;
+                 _logger.LogInformation("[Login] Self-healing SUCCESS.");
+             }
+             else
+             {
+                 _logger.LogWarning("[Login] Self-healing FAILED - No Seller entity found.");
+             }
+        }
+
+        // CHECK SELLER STATUS
+        if (isSeller && loginType == "seller")
+        {
+            var sellerEntity = await _db.Sellers.FirstOrDefaultAsync(s => s.UserId == user.Id);
+            if (sellerEntity != null)
+            {
+                if (sellerEntity.Status == SellerStatus.Pending || sellerEntity.Status == SellerStatus.Isolated)
+                {
+                    ModelState.AddModelError(string.Empty, "Your application is under review. Please wait for admin approval.");
+                    return View(model);
+                }
+                if (sellerEntity.Status == SellerStatus.Rejected)
+                {
+                    ModelState.AddModelError(string.Empty, "This email has been reset by the admin. Please try registering with another email.");
+                    return View(model);
+                }
+                // Only allow if Approved
+                if (sellerEntity.Status != SellerStatus.Approved)
+                {
+                    ModelState.AddModelError(string.Empty, "Access denied.");
+                    return View(model);
+                }
+            }
+        }
+
         // Validate login type matches account type
         if (loginType == "seller" && !isSeller)
         {
-            ModelState.AddModelError(string.Empty, "This account is not registered as a seller. Please login as a user or register as a seller.");
+            _logger.LogWarning("[Login] Rejected: LoginType is Seller but user is not.");
+            ModelState.AddModelError(string.Empty, "You are trying to log in with a User account. Please use the User Login panel.");
             return View(model);
         }
 
@@ -71,7 +274,8 @@ public class AuthController : Controller
         {
             if (isSeller)
             {
-                ModelState.AddModelError(string.Empty, "This is a seller account. Please switch to 'Seller' login type.");
+                 _logger.LogWarning("[Login] Rejected: Seller trying to login as User.");
+                ModelState.AddModelError(string.Empty, "You are trying to log in with a Seller account. Please use the Seller Login panel.");
             }
             else if (isAdmin)
             {
@@ -83,25 +287,53 @@ public class AuthController : Controller
         var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: false);
         if (!result.Succeeded)
         {
-            ModelState.AddModelError(string.Empty, "Invalid credentials.");
+            _logger.LogWarning($"[Login] PasswordSignInAsync failed. Result: {result}");
+            ModelState.AddModelError(string.Empty, "Invalid email or password. Please check your credentials and try again.");
             return View(model);
         }
 
-        if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
-        {
-            return Redirect(model.ReturnUrl);
-        }
+        _logger.LogInformation("[Login] PasswordSignInAsync SUCCESS.");
 
-        // Redirect to appropriate dashboard based on role
+        // Merge Guest Cart if exists
+        await MergeGuestCart(user.Id);
+
+        // STRICT ROLE-BASED REDIRECT - Role dashboard takes priority
+        // Only allow ReturnUrl if it's within the same role area
+        
+        // Admin users should use admin-login page
+        if (isAdmin)
+        {
+            _logger.LogInformation("[Login] Admin user detected - redirecting to admin login.");
+            await _signInManager.SignOutAsync();
+            return Redirect("/auth/admin-login");
+        }
+        
+        // Seller redirect
         if (isSeller)
         {
+            _logger.LogInformation("[Login] Redirecting to Seller Dashboard.");
+            // Only allow ReturnUrl if it starts with /Seller
+            if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl) && model.ReturnUrl.StartsWith("/Seller", StringComparison.OrdinalIgnoreCase))
+            {
+                return Redirect(model.ReturnUrl);
+            }
             return Redirect("/Seller/Dashboard");
         }
 
+        // Regular User redirect
+        _logger.LogInformation("[Login] Redirecting to User Home.");
+        // Only allow ReturnUrl if it does NOT start with /Seller or /Admin
+        if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl) 
+            && !model.ReturnUrl.StartsWith("/Seller", StringComparison.OrdinalIgnoreCase)
+            && !model.ReturnUrl.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            return Redirect(model.ReturnUrl);
+        }
         return Redirect("/"); // Redirect to Homepage (Product Dashboard)
     }
 
     [HttpGet("admin-login")]
+    [HttpGet("/admin/login")] // Alternative route: /admin/login
     [AllowAnonymous]
     public IActionResult AdminLogin(string? returnUrl = null)
     {
@@ -109,6 +341,7 @@ public class AuthController : Controller
     }
 
     [HttpPost("admin-login")]
+    [HttpPost("/admin/login")] // Alternative route: /admin/login
     [AllowAnonymous]
     public async Task<IActionResult> AdminLogin(LoginViewModel model)
     {
@@ -147,7 +380,7 @@ public class AuthController : Controller
         if (user == null)
         {
             _logger.LogWarning($"No user found with email: {model?.Email ?? "unknown"}");
-            ModelState.AddModelError(string.Empty, "Invalid admin credentials or account inactive.");
+            ModelState.AddModelError(string.Empty, "Invalid admin email or password. Please check your credentials.");
             return View(model);
         }
 
@@ -157,7 +390,7 @@ public class AuthController : Controller
         if (!user.IsActive)
         {
             _logger.LogWarning($"User account is INACTIVE: {model?.Email ?? "unknown"}");
-            ModelState.AddModelError(string.Empty, "Invalid admin credentials or account inactive.");
+            ModelState.AddModelError(string.Empty, "Your admin account is inactive. Please contact the system administrator.");
             return View(model);
         }
 
@@ -166,6 +399,14 @@ public class AuthController : Controller
         var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
         _logger.LogInformation($"Is Admin: {isAdmin}");
         
+        // Self-healing: Ensure admin@sparkle.local always has Admin role
+        if (user.Email == "admin@sparkle.local" && !isAdmin)
+        {
+            _logger.LogWarning("Self-healing: Assigning Admin role to admin@sparkle.local");
+            await _userManager.AddToRoleAsync(user, "Admin");
+            isAdmin = true;
+        }
+
         if (!isAdmin)
         {
             _logger.LogWarning($"User {model?.Email ?? "unknown"} is NOT an admin");
@@ -183,16 +424,21 @@ public class AuthController : Controller
         
         if (!result.Succeeded)
         {
+
+
+            
             _logger.LogError($"Password sign-in FAILED for user: {model?.Email ?? "unknown"}");
-            ModelState.AddModelError(string.Empty, "Invalid admin credentials.");
+            ModelState.AddModelError(string.Empty, "Invalid admin email or password. Please check your credentials.");
             return View(model);
         }
 
         _logger.LogInformation("Password sign-in SUCCEEDED!");
         
-        if (!string.IsNullOrEmpty(model?.ReturnUrl) && Url.IsLocalUrl(model?.ReturnUrl))
+        // STRICT ROLE-BASED REDIRECT - Only allow ReturnUrl within Admin area
+        if (!string.IsNullOrEmpty(model?.ReturnUrl) && Url.IsLocalUrl(model?.ReturnUrl) 
+            && model.ReturnUrl.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogInformation($"Redirecting to ReturnUrl: {model.ReturnUrl}");
+            _logger.LogInformation($"Redirecting to Admin ReturnUrl: {model.ReturnUrl}");
             return Redirect(model.ReturnUrl);
         }
 
@@ -358,12 +604,34 @@ public class AuthController : Controller
             NationalIdBackPath = nidBackPath
         };
 
+        // Check for duplicate phone number
+        if (await _userManager.Users.AnyAsync(u => u.PhoneNumber == model.ContactPhone))
+        {
+            ModelState.AddModelError(nameof(model.ContactPhone), "This phone number is already registered.");
+            return View(model);
+        }
+
         var result = await _userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                if (error.Code == "DuplicateEmail" || error.Code == "DuplicateUserName")
+                {
+                    ModelState.AddModelError(nameof(model.Email), "This email address is already registered.");
+                }
+                else if (error.Code == "PasswordTooShort")
+                {
+                    ModelState.AddModelError(nameof(model.Password), "Minimum 6 characters required");
+                }
+                else if (error.Code == "PasswordRequiresDigit")
+                {
+                    ModelState.AddModelError(nameof(model.Password), "Include at least one number");
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
             }
             return View(model);
         }
@@ -375,70 +643,7 @@ public class AuthController : Controller
         return Redirect("/");
     }
 
-    [HttpGet("register-seller")]
-    [AllowAnonymous]
-    public IActionResult RegisterSeller()
-    {
-        return View(new RegisterSellerViewModel());
-    }
 
-    [HttpPost("register-seller")]
-    [AllowAnonymous]
-    public async Task<IActionResult> RegisterSeller(RegisterSellerViewModel model)
-    {
-        if (!ModelState.IsValid)
-        {
-            return View(model);
-        }
-
-        var sellerProfileLines = new List<string>();
-        if (!string.IsNullOrWhiteSpace(model.BusinessName))
-        {
-            sellerProfileLines.Add($"Business: {model.BusinessName}");
-        }
-        if (!string.IsNullOrWhiteSpace(model.BusinessCategory))
-        {
-            sellerProfileLines.Add($"Category: {model.BusinessCategory}");
-        }
-        if (!string.IsNullOrWhiteSpace(model.BusinessRegistrationNumber))
-        {
-            sellerProfileLines.Add($"Reg#: {model.BusinessRegistrationNumber}");
-        }
-        if (!string.IsNullOrWhiteSpace(model.BusinessWebsite))
-        {
-            sellerProfileLines.Add($"Website: {model.BusinessWebsite}");
-        }
-        sellerProfileLines.Add($"Address: {model.Address}");
-
-        var user = new ApplicationUser
-        {
-            UserName = model.Email,
-            Email = model.Email,
-            FullName = model.FullName,
-            IsSeller = true,
-            IsActive = true,
-            ContactPhone = model.ContactPhone,
-            Address = string.Join(" | ", sellerProfileLines)
-        };
-
-        var result = await _userManager.CreateAsync(user, model.Password);
-        if (!result.Succeeded)
-        {
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-            return View(model);
-        }
-
-        await EnsureRoleExists("Seller");
-        await _userManager.AddToRoleAsync(user, "Seller");
-
-        // Optionally create Seller profile here (admin can later approve)
-
-        await _signInManager.SignInAsync(user, isPersistent: true);
-        return Redirect("/Seller/Dashboard");
-    }
 
     [HttpPost("logout")]
     [Authorize]
@@ -490,22 +695,25 @@ public class AuthController : Controller
 
     public class RegisterUserViewModel
     {
-        [Required]
+        [Required(ErrorMessage = "Full Name is required")]
         public string FullName { get; set; } = string.Empty;
 
-        [Required, EmailAddress]
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; } = string.Empty;
 
-        [Required, DataType(DataType.Password)]
+        [Required(ErrorMessage = "Password is required")]
+        [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
-        [Compare("Password"), DataType(DataType.Password)]
+        [Required(ErrorMessage = "Confirm Password is required")]
+        [Compare("Password", ErrorMessage = "Passwords do not match")]
+        [DataType(DataType.Password)]
         public string ConfirmPassword { get; set; } = string.Empty;
 
         // Extra information collected during signup
-        [Required]
-        [Display(Name = "Contact Phone")]
-        [Phone]
+        [Required(ErrorMessage = "Mobile is required")]
+        [BangladeshPhone]
         public string ContactPhone { get; set; } = string.Empty;
 
         [Display(Name = "Address")]
@@ -514,7 +722,7 @@ public class AuthController : Controller
         [Display(Name = "City / Division")]
         public string? Location { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Date of Birth is required")]
         [Display(Name = "Date of Birth")]
         [DataType(DataType.Date)]
         public DateTime? DateOfBirth { get; set; }
@@ -528,40 +736,101 @@ public class AuthController : Controller
 
     public class RegisterSellerViewModel
     {
-        [Required]
+        [Required(ErrorMessage = "Full Name is required")]
         public string FullName { get; set; } = string.Empty;
 
-        [Required, EmailAddress]
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; } = string.Empty;
 
-        [Required, DataType(DataType.Password)]
-        public string Password { get; set; } = string.Empty;
-
-        [Compare("Password"), DataType(DataType.Password)]
-        public string ConfirmPassword { get; set; } = string.Empty;
-
-        [Required]
-        [Display(Name = "Business Phone")]
-        [Phone]
-        public string ContactPhone { get; set; } = string.Empty;
-
-        [Required]
-        [Display(Name = "Business Address")]
-        public string Address { get; set; } = string.Empty;
-
-        [Required]
-        [Display(Name = "Business / Brand Name")]
+        [Required(ErrorMessage = "Business Name is required")]
         public string BusinessName { get; set; } = string.Empty;
 
-        [Required]
-        [Display(Name = "Business Category")]
+        [Required(ErrorMessage = "Category is required")]
         public string BusinessCategory { get; set; } = string.Empty;
 
-        [Display(Name = "Trade License / Registration #")]
+        [Required(ErrorMessage = "Phone Number is required")]
+        [BangladeshPhone]
+        public string ContactPhone { get; set; } = string.Empty;
+
         public string? BusinessRegistrationNumber { get; set; }
 
-        [Display(Name = "Website / Facebook Page")]
-        [Url]
         public string? BusinessWebsite { get; set; }
+
+        public string? Address { get; set; }
+
+        [Required(ErrorMessage = "Password is required")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Confirm Password is required")]
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm Password")]
+        [Compare("Password", ErrorMessage = "The Password and Confirm Password do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+
+    [HttpGet("registration-pending")]
+    [AllowAnonymous]
+    public IActionResult RegistrationPending()
+    {
+        return View();
+    }
+
+    private async Task MergeGuestCart(string userId)
+    {
+        // 1. Get Guest Cart ID from Cookie
+        if (!Request.Cookies.TryGetValue("Sparkle_GuestCartId", out var guestId) || string.IsNullOrEmpty(guestId))
+        {
+            return;
+        }
+
+        // 2. Find Guest Cart in DB
+        var guestCart = await _db.Carts
+            .Include(c => c.Items)
+            .FirstOrDefaultAsync(c => c.UserId == guestId);
+
+        if (guestCart != null && guestCart.Items.Any())
+        {
+            // 3. Find/Create User Cart
+            var userCart = await _db.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (userCart == null)
+            {
+                userCart = new Cart { UserId = userId };
+                _db.Carts.Add(userCart);
+            }
+
+            // 4. Merge Items
+            foreach (var item in guestCart.Items)
+            {
+                var existing = userCart.Items.FirstOrDefault(i => i.ProductVariantId == item.ProductVariantId);
+                if (existing != null)
+                {
+                    existing.Quantity += item.Quantity;
+                }
+                else
+                {
+                     // Must create new object, cannot move entity
+                     userCart.Items.Add(new CartItem
+                     {
+                         ProductVariantId = item.ProductVariantId,
+                         Quantity = item.Quantity,
+                         UnitPrice = item.UnitPrice
+                     });
+                }
+            }
+
+            // 5. Cleanup Guest Cart
+            _db.Carts.Remove(guestCart); // Cascade delete should handle items
+            
+            await _db.SaveChangesAsync();
+        }
+
+        // 6. Delete Cookie
+        Response.Cookies.Delete("Sparkle_GuestCartId");
     }
 }

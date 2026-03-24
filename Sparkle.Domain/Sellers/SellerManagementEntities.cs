@@ -84,7 +84,7 @@ public class SellerPayout : BaseEntity
     public string? TransactionId { get; set; }
     public string? PaymentReference { get; set; }
     
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // CreatedAt inherited from BaseEntity
     public DateTime? ProcessedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public string? ProcessedBy { get; set; }

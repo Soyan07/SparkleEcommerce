@@ -2,6 +2,7 @@ using Sparkle.Domain.Common;
 using Sparkle.Domain.Identity;
 using Sparkle.Domain.Catalog;
 using Sparkle.Domain.Sellers;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Sparkle.Domain.Orders;
 
@@ -12,6 +13,7 @@ public enum ShipmentStatus
 {
     Pending,        // Shipment created but not packed
     Packed,         // Seller has packed the items
+    Shipped,        // Handed over to courier (Legacy/Simple flow)
     PickedUp,       // Courier picked up from seller
     InTransit,      // In transit to customer
     OutForDelivery, // Out for delivery
@@ -31,6 +33,16 @@ public class Shipment : BaseEntity
     /// Unique shipment number for tracking (e.g., SHP-2025-001234)
     /// </summary>
     public string ShipmentNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Type of package (Box, Envelope, Poly Bag)
+    /// </summary>
+    public string? PackageType { get; set; }
+
+    /// <summary>
+    /// Number of boxes in this shipment
+    /// </summary>
+    public int NumberOfBoxes { get; set; } = 1;
     
     /// <summary>
     /// Order this shipment belongs to

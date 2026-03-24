@@ -1,0 +1,65 @@
+@{
+    Layout = null;
+    var orderIds = ViewBag.OrderIds;
+    var amount = ViewBag.Amount;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay with Nagad</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fcebe9; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .nagad-container { background: white; width: 360px; height: 550px; border-radius: 15px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(236, 29, 36, 0.2); border: 2px solid #ec1d24; }
+        .header { background: white; padding: 20px; text-align: center; border-bottom: 2px solid #ec1d24; }
+        .header h2 { color: #ec1d24; margin: 0; font-weight: 800; letter-spacing: 1px; }
+        .merchant-strip { background: #ec1d24; color: white; padding: 10px 20px; display: flex; justify-content: space-between; font-size: 14px; }
+        .body-content { padding: 30px 20px; flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .input-group { margin-bottom: 20px; width: 100%; }
+        .input-group label { display: block; margin-bottom: 8px; color: #333; font-weight: bold; font-size: 14px; }
+        .input-group input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 16px; text-align: center; box-sizing: border-box; outline: none; transition: 0.3s; }
+        .input-group input:focus { border-color: #ec1d24; }
+        .footer { padding: 20px; text-align: center; }
+        .btn-pay { background: #ec1d24; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 4px 10px rgba(236, 29, 36, 0.3); }
+        .btn-pay:hover { background: #d01118; }
+        .cancel-link { display: block; margin-top: 15px; color: #666; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="nagad-container">
+        <div class="header">
+            <!-- Simulating Nagad Logo -->
+            <h2>nagad</h2>
+        </div>
+        
+        <div class="merchant-strip">
+            <span>Sparkle Ecommerce</span>
+            <span style="font-weight: bold;">৳ @amount</span>
+        </div>
+
+        <form action="/payment/process" method="post" style="height: 100%; display: flex; flex-direction: column;">
+             <input type="hidden" name="orderIds" value="@orderIds" />
+
+            <div class="body-content">
+                <div class="input-group">
+                    <label>Mobile Account Number</label>
+                    <input type="text" placeholder="01xxxxxxxxx" required pattern="[0-9]{11}" />
+                </div>
+                <div class="input-group">
+                    <label>PIN</label>
+                    <input type="password" placeholder="****" required maxlength="4" />
+                </div>
+            </div>
+
+            <div class="footer">
+                <button type="submit" name="status" value="success" class="btn-pay">PROCEED</button>
+                <button type="submit" name="status" value="failure" style="background:none; border:none; color:#666; margin-top:10px; cursor:pointer;">Cancel Payment</button>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>

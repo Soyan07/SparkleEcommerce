@@ -1,540 +1,518 @@
-@model Sparkle.Api.Areas.Admin.Controllers.DashboardController.DashboardStats
+@using Sparkle.Api.Areas.Admin.Controllers
+@model Sparkle.Api.Areas.Admin.Controllers.DashboardStats
 @{
-    ViewData["Title"] = "Admin Dashboard";
-    var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
-    var isBangla = langCookie == "bn";
+    ViewData["Title"] = "Dashboard";
 }
 
 <style>
-    * { font-family: 'SolaimanLipi', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    
-    /* Clean white theme with gray accent */
-    .admin-dashboard { background: #f8f9fa; min-height: calc(100vh - 70px); padding: 1.5rem; }
-    
-    /* Header - subtle gray accent */
-    .dashboard-header { background: linear-gradient(135deg, #495057, #6c757d); color: white; padding: 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .dashboard-header h1 { font-size: 1.875rem; font-weight: 400; margin: 0 0 0.5rem 0; }
-    .dashboard-header .welcome-text { font-size: 0.9375rem; opacity: 0.95; }
-    .dashboard-header .admin-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; margin-top: 0.5rem; }
-    
-    /* Stats Cards - white with thin black borders and colorful icons */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .stat-card { background: white; border: 1px solid #000; border-radius: 8px; padding: 1.25rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
-    .stat-card .stat-icon { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 0.875rem; }
-    .stat-card.users .stat-icon { background: linear-gradient(135deg, #cfe2ff, #9ec5fe); color: #0d6efd; }
-    .stat-card.vendors .stat-icon { background: linear-gradient(135deg, #d4edda, #a8e6a3); color: #28a745; }
-    .stat-card.products .stat-icon { background: linear-gradient(135deg, #ffe5d0, #ffc897); color: #fd7e14; }
-    .stat-card.orders .stat-icon { background: linear-gradient(135deg, #e7d6f8, #d1aff0); color: #6f42c1; }
-    .stat-card.revenue .stat-icon { background: linear-gradient(135deg, #cff4fc, #9eeaf9); color: #0dcaf0; }
-    .stat-label { font-size: 0.8125rem; color: #6c757d; margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-value { font-size: 1.875rem; font-weight: 700; color: #0f1111; line-height: 1.2; margin-bottom: 0.25rem; }
-    .stat-change { font-size: 0.75rem; color: #495057; display: flex; align-items: center; gap: 0.25rem; }
-    .stat-change.positive { color: #28a745; }
-    .stat-change.negative { color: #dc3545; }
-    .stat-change i { font-size: 0.875rem; }
-    
-    /* Main Content Grid */
-    .content-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-    
-    /* Content Cards - white with black borders */
-    .content-card { background: white; border: 1px solid #000; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .content-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; padding-bottom: 0.875rem; border-bottom: 1px solid #dee2e6; }
-    .content-card-title { font-size: 1.125rem; font-weight: 600; color: #0f1111; display: flex; align-items: center; gap: 0.5rem; }
-    .content-card-title i { color: #495057; }
-    .content-card-action { font-size: 0.8125rem; color: #0d6efd; text-decoration: none; font-weight: 600; }
-    .content-card-action:hover { color: #0a58ca; text-decoration: underline; }
-    
-    /* Tables */
-    .data-table { width: 100%; }
-    .data-table thead { border-bottom: 2px solid #dee2e6; }
-    .data-table th { padding: 0.75rem 0.5rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-    .data-table td { padding: 1rem 0.5rem; border-bottom: 1px solid #e9ecef; font-size: 0.875rem; color: #0f1111; }
-    .data-table tr:hover { background: #f8f9fa; }
-    .data-table .order-id { font-weight: 600; color: #6f42c1; font-family: 'Courier New', monospace; }
-    .data-table .vendor-name { font-weight: 600; color: #0d6efd; }
-    
-    /* Status Badges */
-    .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-    .status-badge.pending { background: #fff3cd; color: #856404; }
-    .status-badge.processing { background: #d1ecf1; color: #0c5460; }
-    .status-badge.delivered { background: #d4edda; color: #155724; }
-    .status-badge.cancelled { background: #f8d7da; color: #721c24; }
-    .status-badge.active { background: #d4edda; color: #155724; }
-    
-    /* Quick Actions - colorful buttons */
-    .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-    .quick-action-btn { display: flex; align-items: center; gap: 0.625rem; padding: 0.875rem; border: 1px solid #000; border-radius: 6px; background: white; text-decoration: none; color: #0f1111; font-size: 0.875rem; font-weight: 600; transition: all 0.15s; }
-    .quick-action-btn:hover { background: #f8f9fa; transform: translateX(3px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .quick-action-btn:nth-child(1) i { background: linear-gradient(135deg, #d4edda, #a8e6a3); color: #28a745; }
-    .quick-action-btn:nth-child(2) i { background: linear-gradient(135deg, #cfe2ff, #9ec5fe); color: #0d6efd; }
-    .quick-action-btn:nth-child(3) i { background: linear-gradient(135deg, #e7d6f8, #d1aff0); color: #6f42c1; }
-    .quick-action-btn:nth-child(4) i { background: linear-gradient(135deg, #ffe5d0, #ffc897); color: #fd7e14; }
-    .quick-action-btn:nth-child(5) i { background: linear-gradient(135deg, #cff4fc, #9eeaf9); color: #0dcaf0; }
-    .quick-action-btn:nth-child(6) i { background: linear-gradient(135deg, #f8d7da, #f1aeb5); color: #dc3545; }
-    .quick-action-btn i { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 1rem; }
-    
-    /* Progress Bars */
-    .progress-item { margin-bottom: 1rem; }
-    .progress-item:last-child { margin-bottom: 0; }
-    .progress-label { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.875rem; }
-    .progress-label-name { font-weight: 600; color: #0f1111; }
-    .progress-label-value { color: #6c757d; }
-    .progress-bar-wrapper { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
-    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #495057, #6c757d); border-radius: 4px; transition: width 0.3s; }
-    
-    /* Empty State */
-    .empty-state { text-align: center; padding: 2.5rem 1.5rem; color: #6c757d; }
-    .empty-state i { font-size: 3rem; opacity: 0.3; margin-bottom: 1rem; }
-    .empty-state p { font-size: 0.875rem; }
-    
-    /* Alert Boxes */
-    .alert-box { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
-    .alert-box.warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
-    .alert-box.info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
-    .alert-box i { font-size: 1.25rem; margin-top: 0.125rem; }
-    
-    /* Category Cards */
-    .category-carousel-wrapper { position: relative; }
-    .category-cards { 
-        display: grid; 
-        grid-template-columns: repeat(6, minmax(200px, 1fr)); 
-        gap: 1rem; 
-        grid-auto-rows: 1fr;
-        align-items: stretch;
-    }
-    .category-highlight-card { 
-        background: white; 
-        border: 1px solid #000; 
-        border-radius: 8px; 
-        padding: 1.25rem; 
-        transition: all 0.2s; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-        display: flex; 
-        flex-direction: column; 
-        min-height: 200px;
-        height: 100%;
-    }
-    .category-highlight-card.category-hidden { display: none !important; }
-    .category-carousel-controls { position: absolute; top: 50%; right: -60px; transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.5rem; }
-    .category-carousel-btn { width: 40px; height: 40px; background: white; border: 2px solid #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 1.25rem; color: #000; }
-    .category-carousel-btn:hover { background: #000; color: white; transform: scale(1.1); }
-    .category-carousel-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .category-carousel-btn:disabled:hover { background: white; color: #000; transform: scale(1); }
-    .category-highlight-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
-    .category-highlight-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0.875rem; }
-    .category-highlight-icon { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
-    .category-highlight-info { flex: 1; min-width: 0; }
-    .category-highlight-title { font-size: 1.125rem; font-weight: 600; color: #0f1111; margin-bottom: 0.25rem; }
-    .category-highlight-count { font-size: 0.8125rem; color: #6c757d; font-weight: 600; }
-    .category-highlight-desc { font-size: 0.875rem; color: #495057; line-height: 1.5; margin-bottom: 0.875rem; }
-    .category-highlight-bullets { list-style: none; padding: 0; margin: 0; }
-    .category-highlight-bullets li { font-size: 0.8125rem; color: #495057; padding: 0.375rem 0; padding-left: 1.25rem; position: relative; }
-    .category-highlight-bullets li:before { content: "•"; position: absolute; left: 0; font-weight: 700; }
-    .category-highlight-card.electronics-gadgets .category-highlight-icon { background: linear-gradient(135deg, #cfe2ff, #9ec5fe); }
-    .category-highlight-card.electronics-gadgets .category-highlight-bullets li:before { color: #0d6efd; }
-    .category-highlight-card.fashion-lifestyle .category-highlight-icon { background: linear-gradient(135deg, #f8d7da, #f1aeb5); }
-    .category-highlight-card.fashion-lifestyle .category-highlight-bullets li:before { color: #dc3545; }
-    .category-highlight-card.home-living .category-highlight-icon { background: linear-gradient(135deg, #d4edda, #a8e6a3); }
-    .category-highlight-card.home-living .category-highlight-bullets li:before { color: #28a745; }
-    .category-highlight-card.mobiles-tablets .category-highlight-icon { background: linear-gradient(135deg, #cff4fc, #9eeaf9); }
-    .category-highlight-card.mobiles-tablets .category-highlight-bullets li:before { color: #0dcaf0; }
-    .category-highlight-card.laptops-computers .category-highlight-icon { background: linear-gradient(135deg, #cfe2ff, #9ec5fe); }
-    .category-highlight-card.laptops-computers .category-highlight-bullets li:before { color: #0d6efd; }
-    .category-highlight-card.home-appliances .category-highlight-icon { background: linear-gradient(135deg, #fff3cd, #ffe69c); }
-    .category-highlight-card.home-appliances .category-highlight-bullets li:before { color: #ffc107; }
-    .category-highlight-card.kitchen-small-appliances .category-highlight-icon { background: linear-gradient(135deg, #f8d7da, #f1aeb5); }
-    .category-highlight-card.kitchen-small-appliances .category-highlight-bullets li:before { color: #dc3545; }
-    .category-highlight-card.beauty-personal-care .category-highlight-icon { background: linear-gradient(135deg, #f8d7da, #f1aeb5); }
-    .category-highlight-card.beauty-personal-care .category-highlight-bullets li:before { color: #dc3545; }
-    .category-highlight-card.jewelry-accessories .category-highlight-icon { background: linear-gradient(135deg, #fff3cd, #ffe69c); }
-    .category-highlight-card.jewelry-accessories .category-highlight-bullets li:before { color: #ffc107; }
-    .category-highlight-card.groceries-essentials .category-highlight-icon { background: linear-gradient(135deg, #d4edda, #a8e6a3); }
-    .category-highlight-card.groceries-essentials .category-highlight-bullets li:before { color: #28a745; }
-    .category-highlight-card.baby-kids-mom .category-highlight-icon { background: linear-gradient(135deg, #cff4fc, #9eeaf9); }
-    .category-highlight-card.baby-kids-mom .category-highlight-bullets li:before { color: #0dcaf0; }
-    .category-highlight-card.toys-games .category-highlight-icon { background: linear-gradient(135deg, #cfe2ff, #9ec5fe); }
-    .category-highlight-card.toys-games .category-highlight-bullets li:before { color: #0d6efd; }
-    .category-highlight-card.books-stationery .category-highlight-icon { background: linear-gradient(135deg, #cff4fc, #9eeaf9); }
-    .category-highlight-card.books-stationery .category-highlight-bullets li:before { color: #0dcaf0; }
-    .category-highlight-card.sports-outdoors .category-highlight-icon { background: linear-gradient(135deg, #d4edda, #a8e6a3); }
-    .category-highlight-card.sports-outdoors .category-highlight-bullets li:before { color: #28a745; }
-    .category-highlight-card.automotive-bike .category-highlight-icon { background: linear-gradient(135deg, #e2e3e5, #d3d3d4); }
-    .category-highlight-card.automotive-bike .category-highlight-bullets li:before { color: #495057; }
-    .category-highlight-card.pet-supplies .category-highlight-icon { background: linear-gradient(135deg, #fff3cd, #ffe69c); }
-    .category-highlight-card.pet-supplies .category-highlight-bullets li:before { color: #ffc107; }
-    .category-highlight-card.local-bd-brands .category-highlight-icon { background: linear-gradient(135deg, #d4edda, #a8e6a3); }
-    .category-highlight-card.local-bd-brands .category-highlight-bullets li:before { color: #28a745; }
-    .category-highlight-card.medicine-wellness .category-highlight-icon { background: linear-gradient(135deg, #f8d7da, #f1aeb5); }
-    .category-highlight-card.medicine-wellness .category-highlight-bullets li:before { color: #dc3545; }
-    .category-highlight-card.photography-camera .category-highlight-icon { background: linear-gradient(135deg, #cfe2ff, #9ec5fe); }
-    .category-highlight-card.photography-camera .category-highlight-bullets li:before { color: #0d6efd; }
-    .category-highlight-card.art-crafts .category-highlight-icon { background: linear-gradient(135deg, #cff4fc, #9eeaf9); }
-    .category-highlight-card.art-crafts .category-highlight-bullets li:before { color: #0dcaf0; }
-    .category-highlight-card.musical-instruments .category-highlight-icon { background: linear-gradient(135deg, #fff3cd, #ffe69c); }
-    .category-highlight-card.musical-instruments .category-highlight-bullets li:before { color: #ffc107; }
-    .category-highlight-card.garden-outdoor .category-highlight-icon { background: linear-gradient(135deg, #d4edda, #a8e6a3); }
-    .category-highlight-card.garden-outdoor .category-highlight-bullets li:before { color: #28a745; }
-    .category-highlight-card.travel-luggage .category-highlight-icon { background: linear-gradient(135deg, #cfe2ff, #9ec5fe); }
-    .category-highlight-card.travel-luggage .category-highlight-bullets li:before { color: #0d6efd; }
-    .category-highlight-card.fitness-gym .category-highlight-icon { background: linear-gradient(135deg, #f8d7da, #f1aeb5); }
-    .category-highlight-card.fitness-gym .category-highlight-bullets li:before { color: #dc3545; }
-    
-    /* Responsive */
-    @@media (max-width: 1400px) {
-        .category-cards { grid-template-columns: repeat(5, minmax(200px, 1fr)); }
+    /* Professional Dashboard Styles */
+    .metric-card {
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
-    @@media (max-width: 1200px) {
-        .category-cards { grid-template-columns: repeat(4, minmax(200px, 1fr)); }
+    .metric-card-green { background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); }
+    .metric-card-blue { background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); }
+    .metric-card-orange { background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); }
+    .metric-card-purple { background: linear-gradient(135deg, #faf5ff 0%, #ffffff 100%); }
+    
+    .metric-card:hover {
+        border-color: #d1d5db;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
     }
     
-    @@media (max-width: 992px) {
-        .content-grid { grid-template-columns: 1fr; }
-        .stats-grid { grid-template-columns: repeat(2, 1fr); }
-        .category-cards { grid-template-columns: repeat(3, minmax(200px, 1fr)); }
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
     }
     
-    @@media (max-width: 768px) {
-        .category-cards { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
-        .category-highlight-card { min-height: 180px; }
+    .chart-card {
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
-    @@media (max-width: 576px) {
-        .stats-grid { grid-template-columns: 1fr; }
-        .quick-actions { grid-template-columns: 1fr; }
-        .dashboard-header { padding: 1.5rem; }
-        .content-card { padding: 1rem; }
-        .category-cards { grid-template-columns: 1fr; }
-        .category-highlight-card { min-height: auto; }
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.2;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 </style>
 
-<div class="admin-dashboard">
-    <!-- Header -->
-    <div class="dashboard-header">
-        <h1>@(isBangla ? "অ্যাডমিন ড্যাশবোর্ড" : "Admin Dashboard")</h1>
-        <p class="welcome-text">@(isBangla ? "প্ল্যাটফর্ম পারফরম্যান্স এবং বিশ্লেষণ ওভারভিউ" : "Platform performance and analytics overview")</p>
-        <span class="admin-badge">@(isBangla ? "সুপার অ্যাডমিন" : "SUPER ADMIN")</span>
-    </div>
-
-    <!-- Alert Boxes -->
-    @if (Model.PendingSellers > 0)
-    {
-        <div class="alert-box warning">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            <div>
-                <strong>@(isBangla ? "পেন্ডিং সেলার অনুমোদন" : "Pending Seller Approvals")</strong><br />
-                @Model.PendingSellers @(isBangla ? "টি নতুন সেলার অনুমোদনের জন্য অপেক্ষমাণ" : "new sellers waiting for approval")
-                <a href="/admin/sellers" style="color: inherit; font-weight: 600;">@(isBangla ? "এখনই পর্যালোচনা করুন" : "Review now") →</a>
+<!-- Minimal Header -->
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-1" style="font-weight: 700; color: #111827; font-size: 24px;">Dashboard</h4>
+            <p class="text-muted mb-0" style="font-size: 13px; font-weight: 500;">Platform performance overview</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-light border" onclick="window.location.reload()" style="border-radius: 8px; font-weight: 600;">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border-radius: 8px; font-weight: 600;">
+                    <i class="bi bi-calendar3 me-1"></i>@DateTime.Now.ToString("dd MMM")
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Today</a></li>
+                    <li><a class="dropdown-item" href="#">This Week</a></li>
+                    <li><a class="dropdown-item" href="#">This Month</a></li>
+                </ul>
             </div>
         </div>
-    }
-
-    <!-- Main Stats Grid -->
-    <div class="stats-grid">
-        <!-- Total Users -->
-        <div class="stat-card users">
-            <div class="stat-icon"><i class="bi bi-people"></i></div>
-            <div class="stat-label">@(isBangla ? "মোট ব্যবহারকারী" : "Total Users")</div>
-            <div class="stat-value">@Model.TotalUsers</div>
-            <div class="stat-change positive"><i class="bi bi-arrow-up"></i> @(isBangla ? "নতুন আজ" : "New today") @Model.NewUsersToday</div>
-        </div>
-
-        <!-- Total Sellers -->
-        <div class="stat-card sellers">
-            <div class="stat-icon"><i class="bi bi-shop-window"></i></div>
-            <div class="stat-label">@(isBangla ? "মোট সেলার" : "Total Sellers")</div>
-            <div class="stat-value">@Model.TotalSellers</div>
-            <div class="stat-change"><i class="bi bi-check-circle"></i> @(isBangla ? "সক্রিয়" : "Active") @Model.ActiveSellers</div>
-        </div>
-
-        <!-- Total Products -->
-        <div class="stat-card products">
-            <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
-            <div class="stat-label">@(isBangla ? "মোট পণ্য" : "Total Products")</div>
-            <div class="stat-value">@Model.TotalProducts</div>
-            <div class="stat-change"><i class="bi bi-check-circle"></i> @(isBangla ? "সক্রিয়" : "Active") @Model.ActiveProducts</div>
-        </div>
-
-        <!-- Total Orders -->
-        <div class="stat-card orders">
-            <div class="stat-icon"><i class="bi bi-cart-check"></i></div>
-            <div class="stat-label">@(isBangla ? "মোট অর্ডার" : "Total Orders")</div>
-            <div class="stat-value">@Model.TotalOrders</div>
-            <div class="stat-change positive"><i class="bi bi-arrow-up"></i> @(isBangla ? "আজ" : "Today") @Model.TodayOrders</div>
-        </div>
-
-        <!-- Total Revenue -->
-        <div class="stat-card revenue">
-            <div class="stat-icon"><i class="bi bi-currency-dollar"></i></div>
-            <div class="stat-label">@(isBangla ? "মোট রাজস্ব" : "Total Revenue")</div>
-            <div class="stat-value">৳@Model.TotalRevenue.ToString("N0")</div>
-            <div class="stat-change positive"><i class="bi bi-arrow-up"></i> @(isBangla ? "মাসে" : "This Month") ৳@Model.MonthRevenue.ToString("N0")</div>
-        </div>
     </div>
+</div>
 
-    <!-- Secondary Stats -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">@(isBangla ? "আজকের রাজস্ব" : "Today's Revenue")</div>
-            <div class="stat-value" style="font-size: 1.5rem;">৳@Model.TodayRevenue.ToString("N0")</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">@(isBangla ? "গড় অর্ডার মূল্য" : "Average Order Value")</div>
-            <div class="stat-value" style="font-size: 1.5rem;">৳@Model.AverageOrderValue.ToString("N0")</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">@(isBangla ? "অপেক্ষমাণ অর্ডার" : "Pending Orders")</div>
-            <div class="stat-value" style="font-size: 1.5rem; color: #fd7e14;">@Model.PendingOrders</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">@(isBangla ? "সম্পন্ন অর্ডার" : "Completed Orders")</div>
-            <div class="stat-value" style="font-size: 1.5rem; color: #28a745;">@Model.DeliveredOrders</div>
-        </div>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div class="content-grid">
-        <!-- Recent Orders -->
-        <div class="content-card">
-            <div class="content-card-header">
-                <div class="content-card-title">
-                    <i class="bi bi-clock-history"></i>
-                    @(isBangla ? "সাম্প্রতিক অর্ডার" : "Recent Orders")
+<!-- Key Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-green">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="stat-label mb-2">Revenue</p>
+                        <h3 class="stat-value mb-0">৳@Model.TotalRevenue.ToString("N0")</h3>
+                    </div>
+                    <div class="metric-icon" style="background: #f0fdf4; color: #16a34a;">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
                 </div>
-                <a href="/order/history" class="content-card-action">@(isBangla ? "সবগুলো দেখুন" : "View All") →</a>
+                <p class="mb-0" style="font-size: 12px; font-weight: 500; color: #16a34a;">
+                    <i class="bi bi-arrow-up-short"></i>Total earnings
+                </p>
             </div>
-            
-            @if (Model.RecentOrders.Any())
-            {
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>@(isBangla ? "অর্ডার আইডি" : "Order ID")</th>
-                            <th>@(isBangla ? "গ্রাহক" : "Customer")</th>
-                            <th>@(isBangla ? "তারিখ" : "Date")</th>
-                            <th>@(isBangla ? "মোট" : "Total")</th>
-                            <th>@(isBangla ? "স্ট্যাটাস" : "Status")</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var order in Model.RecentOrders)
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-blue">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="stat-label mb-2">Orders</p>
+                        <h3 class="stat-value mb-0">@Model.TotalOrders</h3>
+                    </div>
+                    <div class="metric-icon" style="background: #eff6ff; color: #2563eb;">
+                        <i class="bi bi-bag-check"></i>
+                    </div>
+                </div>
+                <p class="mb-0" style="font-size: 12px; font-weight: 500; color: #2563eb;">
+                    <i class="bi bi-plus"></i>@Model.TodayOrders today
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-orange">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="stat-label mb-2">Customers</p>
+                        <h3 class="stat-value mb-0">@Model.TotalUsers</h3>
+                    </div>
+                    <div class="metric-icon" style="background: #fef3c7; color: #d97706;">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+                <p class="mb-0" style="font-size: 12px; font-weight: 500; color: #d97706;">
+                    <i class="bi bi-person-check"></i>Registered
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-purple">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="stat-label mb-2">Vendors</p>
+                        <h3 class="stat-value mb-0">@Model.TotalSellers</h3>
+                    </div>
+                    <div class="metric-icon" style="background: #f5f3ff; color: #7c3aed;">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                </div>
+                <p class="mb-0" style="font-size: 12px; font-weight: 500; color: #7c3aed;">
+                    <i class="bi bi-check-circle"></i>Active sellers
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+    <!-- Revenue Chart -->
+    <div class="col-xl-8">
+        <div class="chart-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="mb-0" style="font-weight: 700; font-size: 15px; color: #111827;">Revenue Trend</h6>
+                        <p class="text-muted mb-0" style="font-size: 12px; font-weight: 500;">Last 30 days</p>
+                    </div>
+                    <a href="/Admin/Reports" class="btn btn-sm btn-light border" style="border-radius: 8px; font-weight: 600; font-size: 13px;">
+                        View Reports
+                    </a>
+                </div>
+                <div style="height: 350px; position: relative;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions & Donut -->
+    <div class="col-xl-4">
+        <div class="chart-card h-100">
+            <div class="card-body p-4">
+                <h6 class="mb-3" style="font-weight: 700; font-size: 15px; color: #111827;">Quick Actions</h6>
+                <div class="d-grid gap-2 mb-3">
+                    <a href="/Admin/Products/Create" class="btn btn-sm btn-primary text-start" style="border-radius: 8px; font-weight: 600; padding: 8px 12px; font-size: 13px;">
+                        <i class="bi bi-plus-circle me-2"></i>New Product
+                    </a>
+                    <a href="/Admin/Orders" class="btn btn-sm btn-outline-secondary text-start" style="border-radius: 8px; font-weight: 600; padding: 8px 12px; font-size: 13px;">
+                        <i class="bi bi-box-seam me-2"></i>Orders
+                    </a>
+                    <a href="/Admin/Users" class="btn btn-sm btn-outline-secondary text-start" style="border-radius: 8px; font-weight: 600; padding: 8px 12px; font-size: 13px;">
+                        <i class="bi bi-people me-2"></i>Users
+                    </a>
+                </div>
+
+                <h6 class="mb-3" style="font-weight: 700; font-size: 15px; color: #111827;">Payment Methods</h6>
+                <div style="height: 170px; position: relative;">
+                    <canvas id="salesDonut"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disputes Alert -->
+@if (Model.RecentDisputes.Any())
+{
+    <div class="alert alert-danger border-0 mb-4" style="border-radius: 12px; border-left: 4px solid #dc2626 !important; background: #fef2f2;">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-exclamation-triangle-fill fs-4" style="color: #dc2626;"></i>
+                <div>
+                    <h6 class="mb-0" style="font-weight: 700; color: #991b1b; font-size: 14px;">
+                        @Model.RecentDisputes.Count Pending Disputes
+                    </h6>
+                    <p class="mb-0" style="font-size: 12px; color: #7f1d1d; font-weight: 500;">Require immediate attention</p>
+                </div>
+            </div>
+            <a href="/Admin/Disputes" class="btn btn-sm btn-danger" style="border-radius: 8px; font-weight: 600;">
+                Review
+            </a>
+        </div>
+    </div>
+}
+
+<!-- Recent Orders -->
+<div class="chart-card">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h6 class="mb-0" style="font-weight: 700; font-size: 15px; color: #111827;">Recent Orders</h6>
+                <p class="text-muted mb-0" style="font-size: 12px; font-weight: 500;">Latest transactions</p>
+            </div>
+            <div class="d-flex gap-2">
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border-radius: 8px; font-weight: 600; font-size: 13px;">
+                        <i class="bi bi-funnel me-1"></i> Sort
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                        <li><a class="dropdown-item @(ViewBag.CurrentSort == "date" ? "active" : "")" href="?sortOrder=date">Latest</a></li>
+                        <li><a class="dropdown-item @(ViewBag.CurrentSort == "amount" ? "active" : "")" href="?sortOrder=amount">Higest Amount</a></li>
+                    </ul>
+                </div>
+                <a href="/Admin/Orders" class="btn btn-sm btn-light border" style="border-radius: 8px; font-weight: 600; font-size: 13px;">
+                    View All
+                </a>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" style="font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #e5e7eb;">
+                        <th class="border-0 py-3 ps-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; width: 50px;">No.</th>
+                        <th class="border-0 py-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Order</th>
+                        <th class="border-0 py-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Seller</th>
+                        <th class="border-0 py-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Customer</th>
+                        <th class="border-0 py-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Date & Time</th>
+                        <th class="border-0 py-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Amount</th>
+                        <th class="border-0 py-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
+                        <th class="border-0 py-3" style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.RecentOrders.Any())
+                    {
+                        var index = 1;
+                        foreach (var order in Model.RecentOrders)
                         {
-                            <tr>
-                                <td><span class="order-id">#@order.OrderId</span></td>
-                                <td>@order.CustomerName</td>
-                                <td>@order.Date.ToString("MMM dd, yyyy")</td>
-                                <td><strong>৳@order.Total.ToString("N0")</strong></td>
-                                <td><span class="status-badge @order.Status.ToLower()">@order.Status</span></td>
+                            <tr style="border-bottom: 1px solid #f3f4f6;">
+                                <td class="py-3 ps-3 text-muted fw-bold">@(index++)</td>
+                                <td class="py-3">
+                                    <div class="d-flex flex-column">
+                                        <span class="mb-1 text-truncate" style="font-weight: 600; color: #111827; font-size: 13px; max-width: 200px;" title="@order.ProductName">@order.ProductName</span>
+                                        <span class="badge bg-light text-dark font-monospace" style="font-weight: 600; font-size: 10px; width: fit-content;">@order.OrderNumber</span>
+                                    </div>
+                                </td>
+                                <td class="py-3">
+                                    <span class="text-dark fw-medium">@order.SellerName</span>
+                                </td>
+                                <td class="py-3" style="font-weight: 600; color: #111827;">@order.CustomerName</td>
+                                <td class="py-3 text-muted">
+                                    <div class="fw-medium">@order.Date.ToString("MMM dd, yyyy • h:mm tt")</div>
+                                    <!-- Time merged above -->
+                                </td>
+                                <td class="py-3" style="font-weight: 700; color: #16a34a;">৳@order.Total.ToString("N0")</td>
+                                <td class="py-3">
+                                    @{
+                                        var badge = order.Status.ToLower() switch {
+                                            "delivered" => "success",
+                                            "pending" => "warning",
+                                            "cancelled" => "danger",
+                                            "processing" => "info",
+                                            _ => "secondary"
+                                        };
+                                    }
+                                    <span class="badge bg-@badge" style="font-weight: 600; font-size: 10px; padding: 4px 10px; border-radius: 6px;">
+                                        @order.Status.ToUpper()
+                                    </span>
+                                </td>
+                                <td class="py-3">
+                                    <a href="/Admin/Orders/Details/@order.OrderId" class="btn btn-sm btn-light border" style="border-radius: 6px; padding: 4px 10px;">
+                                        <i class="bi bi-eye" style="font-size: 12px;"></i>
+                                    </a>
+                                </td>
                             </tr>
                         }
-                    </tbody>
-                </table>
-            }
-            else
-            {
-                <div class="empty-state">
-                    <i class="bi bi-inbox"></i>
-                    <p>@(isBangla ? "কোন অর্ডার নেই" : "No orders yet")</p>
-                </div>
-            }
-        </div>
-
-        <!-- Quick Actions & Top Vendors -->
-        <div>
-            <!-- Quick Actions -->
-            <div class="content-card" style="margin-bottom: 1.5rem;">
-                <div class="content-card-header">
-                    <div class="content-card-title">
-                        <i class="bi bi-lightning"></i>
-                        @(isBangla ? "দ্রুত কাজ" : "Quick Actions")
-                    </div>
-                </div>
-                <div class="quick-actions">
-                    <a href="/Admin/Sellers" class="quick-action-btn">
-                        <i class="bi bi-shop-window"></i>
-                        <span>@(isBangla ? "সেলার পরিচালনা" : "Manage Sellers")</span>
-                    </a>
-                    <a href="/Admin/Products" class="quick-action-btn">
-                        <i class="bi bi-box-seam"></i>
-                        <span>@(isBangla ? "পণ্য পরিচালনা" : "Manage Products")</span>
-                    </a>
-                    <a href="/Admin/Orders" class="quick-action-btn">
-                        <i class="bi bi-cart-check"></i>
-                        <span>@(isBangla ? "অর্ডার দেখুন" : "View Orders")</span>
-                    </a>
-                    <a href="/Admin/Users" class="quick-action-btn">
-                        <i class="bi bi-people"></i>
-                        <span>@(isBangla ? "ব্যবহারকারী পরিচালনা" : "Manage Users")</span>
-                    </a>
-                    <a href="/Admin/Categories" class="quick-action-btn">
-                        <i class="bi bi-tag"></i>
-                        <span>@(isBangla ? "ক্যাটাগরি" : "Categories")</span>
-                    </a>
-                    <a href="/Admin/Settings" class="quick-action-btn">
-                        <i class="bi bi-gear"></i>
-                        <span>@(isBangla ? "সেটিংস" : "Settings")</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Top Sellers -->
-            <div class="content-card">
-                <div class="content-card-header">
-                    <div class="content-card-title">
-                        <i class="bi bi-trophy"></i>
-                        @(isBangla ? "সেরা সেলার" : "Top Sellers")
-                    </div>
-                </div>
-                
-                @if (Model.TopSellers.Any())
-                {
-                    <div>
-                        @foreach (var seller in Model.TopSellers)
-                        {
-                            <div class="progress-item">
-                                <div class="progress-label">
-                                    <span class="progress-label-name">@seller.ShopName</span>
-                                    <span class="progress-label-value">৳@seller.TotalRevenue.ToString("N0")</span>
-                                </div>
-                                <div class="progress-bar-wrapper">
-                                    <div class="progress-bar-fill" style="width: @((seller.TotalRevenue / Model.TopSellers.Max(v => v.TotalRevenue) * 100))%"></div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="empty-state">
-                        <i class="bi bi-shop"></i>
-                        <p>@(isBangla ? "এখনো কোন ভেন্ডর নেই" : "No vendors yet")</p>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Order Statistics -->
-    <div class="content-card">
-        <div class="content-card-header">
-            <div class="content-card-title">
-                <i class="bi bi-graph-up"></i>
-                @(isBangla ? "অর্ডার পরিসংখ্যান" : "Order Statistics")
-            </div>
-        </div>
-        <div class="stats-grid" style="margin-bottom: 0;">
-            <div>
-                <div class="progress-item">
-                    <div class="progress-label">
-                        <span class="progress-label-name">@(isBangla ? "অপেক্ষমাণ" : "Pending")</span>
-                        <span class="progress-label-value">@Model.PendingOrders / @Model.TotalOrders</span>
-                    </div>
-                    <div class="progress-bar-wrapper">
-                        <div class="progress-bar-fill" style="width: @((Model.TotalOrders > 0 ? (double)Model.PendingOrders / Model.TotalOrders * 100 : 0))%; background: linear-gradient(90deg, #fd7e14, #ff9f40);"></div>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <div class="progress-item">
-                    <div class="progress-label">
-                        <span class="progress-label-name">@(isBangla ? "প্রক্রিয়াকরণ" : "Processing")</span>
-                        <span class="progress-label-value">@Model.ProcessingOrders / @Model.TotalOrders</span>
-                    </div>
-                    <div class="progress-bar-wrapper">
-                        <div class="progress-bar-fill" style="width: @((Model.TotalOrders > 0 ? (double)Model.ProcessingOrders / Model.TotalOrders * 100 : 0))%; background: linear-gradient(90deg, #17a2b8, #46c5d9);"></div>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <div class="progress-item">
-                    <div class="progress-label">
-                        <span class="progress-label-name">@(isBangla ? "সম্পন্ন" : "Delivered")</span>
-                        <span class="progress-label-value">@Model.DeliveredOrders / @Model.TotalOrders</span>
-                    </div>
-                    <div class="progress-bar-wrapper">
-                        <div class="progress-bar-fill" style="width: @((Model.TotalOrders > 0 ? (double)Model.DeliveredOrders / Model.TotalOrders * 100 : 0))%; background: linear-gradient(90deg, #28a745, #5cb85c);"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Category Highlights -->
-    @if (Model.CategoryHighlights.Any())
-    {
-        <div class="content-card" style="margin-top: 1.5rem;">
-            <div class="content-card-header">
-                <div class="content-card-title">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                    @(isBangla ? "বিশেষ ক্যাটাগরি" : "Featured Categories")
-                </div>
-                <a href="/" class="content-card-action">@(isBangla ? "সবগুলো দেখুন" : "View All") →</a>
-            </div>
-            
-            <div class="category-cards" id="categoryGrid">
-                @for (int i = 0; i < Model.CategoryHighlights.Count; i++)
-                {
-                    var cat = Model.CategoryHighlights[i];
-                    var isHidden = i >= 12 ? "category-hidden" : "";
-                    <div class="category-highlight-card @cat.Highlight.Slug @isHidden">
-                        <div class="category-highlight-header">
-                            <div class="category-highlight-icon @cat.Highlight.AccentClass">
-                                <i class="bi @cat.Highlight.Icon"></i>
-                            </div>
-                            <div class="category-highlight-info">
-                                <div class="category-highlight-title">@cat.Highlight.Title</div>
-                                <div class="category-highlight-count">
-                                    @cat.ProductCount @(isBangla ? "টি পণ্য" : cat.ProductCount == 1 ? "Product" : "Products")
-                                </div>
-                            </div>
-                        </div>
-                        <p class="category-highlight-desc">@cat.Highlight.Description</p>
-                        <ul class="category-highlight-bullets">
-                            @foreach (var point in cat.Highlight.BulletPoints)
-                            {
-                                <li>@point</li>
-                            }
-                        </ul>
-                    </div>
-                }
-            </div>
-            
-            @if (Model.CategoryHighlights.Count > 12)
-            {
-                <div class="text-center mt-4">
-                    <button id="seeMoreBtn" class="btn btn-outline-primary" onclick="toggleCategories()">
-                        <i class="bi bi-chevron-down"></i> @(isBangla ? "আরও দেখুন" : "See More")
-                    </button>
-                </div>
-            }
-            
-            <script>
-                let isExpanded = false;
-                
-                function toggleCategories() {
-                    const allCards = document.querySelectorAll('.category-highlight-card');
-                    const hiddenCards = Array.from(allCards).slice(12); // Get cards from index 12 onwards
-                    const btn = document.getElementById('seeMoreBtn');
-                    
-                    if (!isExpanded) {
-                        // Show hidden cards (cards 13-24)
-                        hiddenCards.forEach(card => {
-                            card.classList.remove('category-hidden');
-                        });
-                        btn.innerHTML = '<i class="bi bi-chevron-up"></i> @(isBangla ? "কম দেখুন" : "See Less")';
-                        isExpanded = true;
-                    } else {
-                        // Hide cards again (show only first 12)
-                        hiddenCards.forEach(card => {
-                            card.classList.add('category-hidden');
-                        });
-                        btn.innerHTML = '<i class="bi bi-chevron-down"></i> @(isBangla ? "আরও দেখুন" : "See More")';
-                        isExpanded = false;
                     }
-                }
-            </script>
+                    else 
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No recent orders found.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
-    }
+    </div>
 </div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Get REAL chart data from backend only
+    let revenueData = @Json.Serialize(Model.RevenueChart.Select(x => x.Revenue).Take(30));
+    let revenueDates = @Json.Serialize(Model.RevenueChart.Select(x => x.FullDate).Take(30));
+    
+    console.log('Revenue Data:', revenueData);
+    console.log('Revenue Dates:', revenueDates);
+    
+    // Create date labels from real data only
+    const dateLabels = revenueDates.map(dateStr => {
+        const d = new Date(dateStr);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[d.getMonth()] + ' ' + d.getDate();
+    });
+    
+    console.log('Date Labels:', dateLabels);
+
+    // Revenue Chart - REAL DATA ONLY
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx && revenueData && revenueData.length > 0) {
+        new Chart(revenueCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [{
+                    label: 'Revenue',
+                    data: revenueData,
+                    borderColor: '#f97316',
+                    backgroundColor: (context) => {
+                        const ctx = context.chart.ctx;
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+                        gradient.addColorStop(0, 'rgba(249, 115, 22, 0.2)');
+                        gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
+                        return gradient;
+                    },
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: '#f97316',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: '#1e293b',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        padding: 14,
+                        borderColor: '#f97316',
+                        borderWidth: 2,
+                        displayColors: false,
+                        titleFont: { size: 13, weight: '600' },
+                        bodyFont: { size: 16, weight: '700' },
+                        callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                const d = new Date(revenueDates[index]);
+                                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                return months[d.getMonth()] + ' ' + d.getDate();
+                            },
+                            label: function(context) {
+                                return '৳' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: { display: false },
+                        ticks: { 
+                            display: true,
+                            color: '#374151',
+                            font: { size: 13, weight: '700' },
+                            padding: 8,
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 15
+                        },
+                        border: {
+                            display: true,
+                            color: '#cbd5e1',
+                            width: 1
+                        }
+                    },
+                    y: {
+                        display: true,
+                        beginAtZero: true,
+                        grid: { 
+                            display: true,
+                            color: '#f1f5f9',
+                            drawBorder: false
+                        },
+                        ticks: { 
+                            display: true,
+                            color: '#64748b',
+                            font: { size: 12, weight: '600' },
+                            padding: 10,
+                            callback: function(value) {
+                                if (value >= 1000) {
+                                    return '৳' + (value / 1000).toFixed(0) + 'k';
+                                }
+                                return '৳' + value;
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+    } else {
+        // Show "No Data" message if no real data available
+        const container = revenueCtx.parentElement;
+        container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100"><div class="text-center text-muted"><i class="bi bi-graph-up fs-1 d-block mb-2"></i><p class="mb-0">No revenue data available</p></div></div>';
+    }
+
+    // Sales Donut Chart - REAL DATA ONLY
+    const donutCtx = document.getElementById('salesDonut');
+    if (donutCtx) {
+        const offlineData = @Json.Serialize(Model.SalesChart.Select(x => x.Offline));
+        const onlineData = @Json.Serialize(Model.SalesChart.Select(x => x.Online));
+        
+        const totalOffline = offlineData.reduce((a, b) => a + b, 0);
+        const totalOnline = onlineData.reduce((a, b) => a + b, 0);
+
+        if (totalOffline > 0 || totalOnline > 0) {
+            new Chart(donutCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cash on Delivery', 'Online Payment'],
+                    datasets: [{
+                        data: [totalOffline, totalOnline],
+                        backgroundColor: ['#f97316', '#fbbf24'],
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: { size: 12, weight: '600' },
+                                color: '#374151',
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#111827',
+                            padding: 12,
+                            titleFont: { size: 12, weight: '600' },
+                            bodyFont: { size: 14, weight: '700' },
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return context.label + ': ' + percentage + '%';
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        } else {
+            const container = donutCtx.parentElement;
+            container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100"><div class="text-center text-muted"><i class="bi bi-pie-chart fs-1 d-block mb-2"></i><p class="mb-0">No sales data</p></div></div>';
+        }
+    }
+</script>
+}

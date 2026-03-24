@@ -3,8 +3,15 @@ namespace Sparkle.Domain.Sellers;
 public enum SellerStatus
 {
     Pending = 0,
-    Active = 1,
-    Suspended = 2
+    Approved = 1,
+    Rejected = 2,
+    Isolated = 3
+}
+
+public enum SellerType
+{
+    City = 0,    // Major city seller - platform pickup available
+    Village = 1  // Remote seller - must drop to hub
 }
 
 public class Seller
@@ -28,6 +35,10 @@ public class Seller
     public string? City { get; set; }
     public string? District { get; set; }
     public string Country { get; set; } = "Bangladesh";
+    
+    // Seller Type and Logistics
+    public SellerType Type { get; set; } = SellerType.City;
+    public int? NearestHubId { get; set; } // FK to Hub (Phase 2)
 
     // NID Verification (Bangladesh Requirement)
     public string? NidNumber { get; set; }
@@ -52,6 +63,16 @@ public class Seller
     public DateTime? ApprovedAt { get; set; }
     public string? ApprovedBy { get; set; }
     public string? RejectionReason { get; set; }
+
+    // Notification Settings
+    public bool NotifyOnNewOrder { get; set; } = true;
+    public bool NotifyOnNewMessage { get; set; } = true;
+    public bool NotifyOnReview { get; set; } = true;
+    
+    // Store Policies
+    public string? ShippingPolicy { get; set; }
+    public string? ReturnPolicy { get; set; }
+    public string? ProcessingTime { get; set; } = "1-3 business days";
 
     public ICollection<SellerPayoutRequest> PayoutRequests { get; set; } = new List<SellerPayoutRequest>();
 }

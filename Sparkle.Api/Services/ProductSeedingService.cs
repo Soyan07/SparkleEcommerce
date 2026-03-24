@@ -22,13 +22,30 @@ public class ProductSeedingService
 
     public async Task SeedProductsAsync()
     {
+        // Performance indexes check independent of seeding logic
+        await EnsurePerformanceIndexesAsync();
+
+        // Ensure all sellers are approved/active so their products show up
+        // REMOVED: Unconditional approval on startup breaks the 'Pending' workflow.
+        // Existing 'Active' (1) sellers are automatically mapped to 'Approved' (1) by Enum integer value preservation.
+        /*
+        var inactiveSellers = await _db.Sellers.Where(s => s.Status != SellerStatus.Approved).ToListAsync();
+        if (inactiveSellers.Any())
+        {
+            foreach (var s in inactiveSellers) s.Status = SellerStatus.Approved;
+            await _db.SaveChangesAsync();
+        }
+        */
+
         // Check if products already exist
-        var productsExist = await _db.Products.AnyAsync();
+        // Check if products already exist (optimized to check limit only)
+        var productsExist = await _db.Products.OrderBy(p => p.Id).Skip(20).AnyAsync();
         var dailyEssentialsExist = await _db.Products.AnyAsync(p => p.Seller != null && p.Seller.ShopName == "Daily Essentials BD");
 
         if (productsExist && dailyEssentialsExist)
         {
-            _logger.LogInformation("Products already seeded. Skipping.");
+            _logger.LogInformation("Products already seeded. Checking Flash Sale items...");
+            await EnsureFlashSaleProductsAsync();
             return;
         }
 
@@ -175,6 +192,7 @@ public class ProductSeedingService
         // Add products to database (with their related images and variants)
         await _db.Products.AddRangeAsync(products);
         await _db.SaveChangesAsync();
+        await EnsureFlashSaleProductsAsync();
 
         _logger.LogInformation($"Successfully seeded {products.Count} products with images and variants!");
     }
@@ -200,8 +218,8 @@ public class ProductSeedingService
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
         };
 
-        product1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/1a1a1a/ffffff?text=Sony+WH-1000XM5+Black", SortOrder = sortOrder++ });
-        product1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/f5f5f5/333333?text=Sony+Headphones+Side", SortOrder = sortOrder++ });
+        product1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/1a1a1a/ffffff?text=Sony+WH-1000XM5+Black", SortOrder = sortOrder++ });
+        product1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/f5f5f5/333333?text=Sony+Headphones+Side", SortOrder = sortOrder++ });
         
         product1.Variants.Add(new ProductVariant { Color = "Black", Price = 32000, Stock = 25, Sku = "SONY-WH-1000XM5-BLK" });
         product1.Variants.Add(new ProductVariant { Color = "Silver", Price = 32000, Stock = 15, Sku = "SONY-WH-1000XM5-SLV" });
@@ -223,7 +241,7 @@ public class ProductSeedingService
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
         };
 
-        product2.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/000000/ffffff?text=Apple+Watch+Series+9", SortOrder = sortOrder++ });
+        product2.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/000000/ffffff?text=Apple+Watch+Series+9", SortOrder = sortOrder++ });
         product2.Variants.Add(new ProductVariant { Color = "Midnight", Size = "45mm", Price = 45000, Stock = 30, Sku = "APPLE-WATCH-S9-45-MID" });
 
         products.Add(product2);
@@ -253,8 +271,8 @@ public class ProductSeedingService
             TotalReviews = 245,
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
         };
-        product1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/1a1a2e/ffffff?text=Galaxy+S24+Ultra", SortOrder = sortOrder++ });
-        product1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/16213e/ffffff?text=S24+Camera", SortOrder = sortOrder++ });
+        product1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/1a1a2e/ffffff?text=Galaxy+S24+Ultra", SortOrder = sortOrder++ });
+        product1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/16213e/ffffff?text=S24+Camera", SortOrder = sortOrder++ });
         
         product1.Variants.Add(new ProductVariant { Color = "Titanium Black", Size = "256GB", Price = 135000, Stock = 40, Sku = "SAM-S24U-12-256-BLK" });
         product1.Variants.Add(new ProductVariant { Color = "Titanium Gray", Size = "256GB", Price = 135000, Stock = 35, Sku = "SAM-S24U-12-256-GRY" });
@@ -277,7 +295,7 @@ public class ProductSeedingService
             TotalReviews = 567,
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
         };
-        product2.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/2d3561/ffffff?text=Redmi+Note+13+Pro", SortOrder = sortOrder++ });
+        product2.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/2d3561/ffffff?text=Redmi+Note+13+Pro", SortOrder = sortOrder++ });
         
         product2.Variants.Add(new ProductVariant { Color = "Midnight Black", Size = "256GB", Price = 32000, Stock = 50, Sku = "XIA-RN13P-8-256-BLK" });
         product2.Variants.Add(new ProductVariant { Color = "Ocean Blue", Size = "256GB", Price = 32000, Stock = 45, Sku = "XIA-RN13P-8-256-BLU" });
@@ -309,8 +327,8 @@ public class ProductSeedingService
             TotalReviews = 1245,
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
         };
-        product1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/1e3a8a/ffffff?text=Navy+T-Shirt", SortOrder = sortOrder++ });
-        product1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/dc2626/ffffff?text=Red+T-Shirt", SortOrder = sortOrder++ });
+        product1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/1e3a8a/ffffff?text=Navy+T-Shirt", SortOrder = sortOrder++ });
+        product1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/dc2626/ffffff?text=Red+T-Shirt", SortOrder = sortOrder++ });
         
         product1.Variants.Add(new ProductVariant { Color = "Navy Blue", Size = "M", Price = 599, Stock = 100, Sku = "TSHIRT-MEN-NAV-M" });
         product1.Variants.Add(new ProductVariant { Color = "Navy Blue", Size = "L", Price = 599, Stock = 85, Sku = "TSHIRT-MEN-NAV-L" });
@@ -344,7 +362,7 @@ public class ProductSeedingService
             TotalReviews = 892,
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
         };
-        product1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/6366f1/ffffff?text=Blue+Bedsheet+Set", SortOrder = sortOrder++ });
+        product1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/6366f1/ffffff?text=Blue+Bedsheet+Set", SortOrder = sortOrder++ });
         
         product1.Variants.Add(new ProductVariant { Color = "Blue Floral", Price = 1899, Stock = 60, Sku = "BEDSHEET-KING-BLUFL" });
         product1.Variants.Add(new ProductVariant { Color = "Pink Floral", Price = 1899, Stock = 55, Sku = "BEDSHEET-KING-PNKFL" });
@@ -358,7 +376,6 @@ public class ProductSeedingService
     {
         var products = new List<Product>();
         var random = new Random();
-        int sortOrder = 0;
 
 
         // Helper to find category or default to first
@@ -385,7 +402,7 @@ public class ProductSeedingService
             Features = "BPA-free safe plastic|Lightweight and portable|Durable and long-lasting|Easy to clean and maintain",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/22d3ee/ffffff?text=RFL+Water+Jug", SortOrder = 0 });
+        p1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/22d3ee/ffffff?text=RFL+Water+Jug", SortOrder = 0 });
         p1.Variants.Add(new ProductVariant { Stock = 200, Price = 180, Sku = "RFL-JUG-2.5L", Color = "Standard" });
         products.Add(p1);
 
@@ -405,7 +422,7 @@ public class ProductSeedingService
             Features = "Strong and sturdy construction|Moisture resistant|Stackable design|Lightweight and portable",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p2.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/f43f5e/ffffff?text=RFL+Stool", SortOrder = 0 });
+        p2.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/f43f5e/ffffff?text=RFL+Stool", SortOrder = 0 });
         p2.Variants.Add(new ProductVariant { Stock = 150, Price = 350, Sku = "RFL-STOOL-MED", Color = "Red" });
         products.Add(p2);
 
@@ -425,7 +442,7 @@ public class ProductSeedingService
             Features = "Rechargeable battery backup|Three-speed airflow control|High airflow for cooling|Compact and portable design",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p3.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/3b82f6/ffffff?text=Walton+Fan", SortOrder = 0 });
+        p3.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/3b82f6/ffffff?text=Walton+Fan", SortOrder = 0 });
         p3.Variants.Add(new ProductVariant { Stock = 80, Price = 3950, Sku = "WALT-FAN-24A", Color = "Blue" });
         products.Add(p3);
 
@@ -445,7 +462,7 @@ public class ProductSeedingService
             Features = "12W low-power consumption|Warm white light|Long-lasting lifespan|Easy to install",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p4.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/f59e0b/ffffff?text=Vision+LED", SortOrder = 0 });
+        p4.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/f59e0b/ffffff?text=Vision+LED", SortOrder = 0 });
         p4.Variants.Add(new ProductVariant { Stock = 250, Price = 220, Sku = "VIS-LED-12W-WW", Color = "Warm White" });
         products.Add(p4);
 
@@ -465,7 +482,7 @@ public class ProductSeedingService
             Features = "Rust-resistant stainless steel|Durable and sturdy|Multi-purpose usage|Easy to clean",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p5.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/9ca3af/ffffff?text=Kiam+Bowls", SortOrder = 0 });
+        p5.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/9ca3af/ffffff?text=Kiam+Bowls", SortOrder = 0 });
         p5.Variants.Add(new ProductVariant { Stock = 120, Price = 480, Sku = "KIAM-BOWL-3PCS", Color = "Silver" });
         products.Add(p5);
 
@@ -485,7 +502,7 @@ public class ProductSeedingService
             Features = "Dual heat settings|Energy-efficient heating|Tip-over safety design|Compact and portable",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p6.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/ef4444/ffffff?text=Walton+Heater", SortOrder = 0 });
+        p6.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/ef4444/ffffff?text=Walton+Heater", SortOrder = 0 });
         p6.Variants.Add(new ProductVariant { Stock = 75, Price = 2450, Sku = "WALT-HEAT-S20", Color = "Red" });
         products.Add(p6);
 
@@ -505,7 +522,7 @@ public class ProductSeedingService
             Features = "Hygienic push-lid system|Durable plastic construction|Lightweight and portable|Easy to clean",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p7.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/10b981/ffffff?text=RFL+Dustbin", SortOrder = 0 });
+        p7.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/10b981/ffffff?text=RFL+Dustbin", SortOrder = 0 });
         p7.Variants.Add(new ProductVariant { Stock = 180, Price = 420, Sku = "RFL-DUST-10L", Color = "Green" });
         products.Add(p7);
 
@@ -525,7 +542,7 @@ public class ProductSeedingService
             Features = "56-inch powerful fan|Energy-efficient motor|Quiet and smooth operation|Durable metal and plastic body",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p8.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/ffffff/000000?text=Super+Star+Fan", SortOrder = 0 });
+        p8.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/ffffff/000000?text=Super+Star+Fan", SortOrder = 0 });
         p8.Variants.Add(new ProductVariant { Stock = 60, Price = 2850, Sku = "SS-FAN-56", Color = "White" });
         products.Add(p8);
 
@@ -545,7 +562,7 @@ public class ProductSeedingService
             Features = "20L capacity|Durable and strong plastic|Easy-grip handle|Lightweight and portable",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p9.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/3b82f6/ffffff?text=RFL+Bucket", SortOrder = 0 });
+        p9.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/3b82f6/ffffff?text=RFL+Bucket", SortOrder = 0 });
         p9.Variants.Add(new ProductVariant { Stock = 220, Price = 190, Sku = "RFL-BUCKET-20L", Color = "Blue" });
         products.Add(p9);
 
@@ -565,7 +582,7 @@ public class ProductSeedingService
             Features = "BPA-free safe plastic|Leak-proof cap|Lightweight and portable|Durable and long-lasting",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 10))
         };
-        p10.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/ec4899/ffffff?text=RFL+Bottle", SortOrder = 0 });
+        p10.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/ec4899/ffffff?text=RFL+Bottle", SortOrder = 0 });
         p10.Variants.Add(new ProductVariant { Stock = 300, Price = 120, Sku = "RFL-BOTTLE-1L", Color = "Pink" });
         products.Add(p10);
 
@@ -606,7 +623,7 @@ public class ProductSeedingService
                CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 60))
            };
            
-           genProduct.Images.Add(new ProductImage { Url = $"https://via.placeholder.com/600x600/{random.Next(100000, 999999)}/ffffff?text={Uri.EscapeDataString(itemName)}", SortOrder = 0 });
+           genProduct.Images.Add(new ProductImage { Url = $"https://placehold.co/600x600/{random.Next(100000, 999999)}/ffffff?text={Uri.EscapeDataString(itemName)}", SortOrder = 0 });
            genProduct.Variants.Add(new ProductVariant { Stock = random.Next(10, 100), Price = price, Sku = genProduct.Slug, Color = "Standard" });
            products.Add(genProduct);
         }
@@ -618,7 +635,6 @@ public class ProductSeedingService
     {
         var products = new List<Product>();
         var random = new Random();
-        int sortOrder = 0;
 
 
         // Helper to find category or default
@@ -646,7 +662,7 @@ public class ProductSeedingService
             Features = "12W high-efficiency LED|Warm & Cool color modes|WiFi app control|Scheduling & timers|20,000+ hours lifespan",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/fcd34d/000000?text=Walton+Smart+LED", SortOrder = 0 });
+        p1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/fcd34d/000000?text=Walton+Smart+LED", SortOrder = 0 });
         p1.Variants.Add(new ProductVariant { Stock = 120, Price = 650, Sku = "WALT-SMART-LED-12W", Color = "Standard" });
         products.Add(p1);
 
@@ -666,7 +682,7 @@ public class ProductSeedingService
             Features = "Rechargeable battery up to 5 hours|3-speed airflow control|Built-in LED night light|Low noise operation|Durable ABS plastic body",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p2.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/3b82f6/ffffff?text=Vision+Rechargeable+Fan", SortOrder = 0 });
+        p2.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/3b82f6/ffffff?text=Vision+Rechargeable+Fan", SortOrder = 0 });
         p2.Variants.Add(new ProductVariant { Stock = 85, Price = 3150, Sku = "VIS-RECH-FAN-138", Color = "Blue" });
         products.Add(p2);
 
@@ -686,7 +702,7 @@ public class ProductSeedingService
             Features = "Large 45L capacity|Ventilated design|Sturdy and flexible plastic|Side grip handles|Water-resistant",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p3.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/fb923c/ffffff?text=RFL+Laundry+Basket", SortOrder = 0 });
+        p3.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/fb923c/ffffff?text=RFL+Laundry+Basket", SortOrder = 0 });
         p3.Variants.Add(new ProductVariant { Stock = 200, Price = 480, Sku = "RFL-LAUNDRY-45L", Color = "Orange" });
         products.Add(p3);
 
@@ -706,7 +722,7 @@ public class ProductSeedingService
             Features = "Dual heat settings|Low power consumption|Safety cut-off feature|Portable design",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p4.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/ef4444/ffffff?text=Singer+Room+Heater", SortOrder = 0 });
+        p4.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/ef4444/ffffff?text=Singer+Room+Heater", SortOrder = 0 });
         p4.Variants.Add(new ProductVariant { Stock = 60, Price = 2100, Sku = "SING-HEAT-SHQ1201", Color = "White" });
         products.Add(p4);
 
@@ -726,7 +742,7 @@ public class ProductSeedingService
             Features = "2-ply thickness|High absorbency|Tear-resistant|Food-grade material|Eco-friendly manufacturing",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p5.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/f3f4f6/000000?text=Bashundhara+Tissue", SortOrder = 0 });
+        p5.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/f3f4f6/000000?text=Bashundhara+Tissue", SortOrder = 0 });
         p5.Variants.Add(new ProductVariant { Stock = 500, Price = 120, Sku = "BASH-TISSUE-2PLY", Color = "White" });
         products.Add(p5);
 
@@ -746,7 +762,7 @@ public class ProductSeedingService
             Features = "Leak-proof screw-cap|BPA-free safe material|Lightweight and portable|Durable body|Easy to clean",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p6.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/3b82f6/ffffff?text=RFL+Water+Bottle", SortOrder = 0 });
+        p6.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/3b82f6/ffffff?text=RFL+Water+Bottle", SortOrder = 0 });
         p6.Variants.Add(new ProductVariant { Stock = 300, Price = 140, Sku = "RFL-SUP-1.2L", Color = "Blue" });
         products.Add(p6);
 
@@ -766,7 +782,7 @@ public class ProductSeedingService
             Features = "1.7L large capacity|Auto shut-off|Fast boiling 1500W|Stainless steel body|Cool-touch handle",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p7.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/d1d5db/000000?text=Walton+Electric+Kettle", SortOrder = 0 });
+        p7.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/d1d5db/000000?text=Walton+Electric+Kettle", SortOrder = 0 });
         p7.Variants.Add(new ProductVariant { Stock = 110, Price = 1250, Sku = "WALT-KET-K17L", Color = "Silver" });
         products.Add(p7);
 
@@ -786,7 +802,7 @@ public class ProductSeedingService
             Features = "Blender + Grinder + Juicer|400W motor|Stainless steel blades|Multiple jar sizes|Shock-resistant base",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p8.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/ef4444/ffffff?text=Miyako+Blender", SortOrder = 0 });
+        p8.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/ef4444/ffffff?text=Miyako+Blender", SortOrder = 0 });
         p8.Variants.Add(new ProductVariant { Stock = 90, Price = 2200, Sku = "MIYAKO-BL-152", Color = "Red" });
         products.Add(p8);
 
@@ -806,7 +822,7 @@ public class ProductSeedingService
             Features = "Fresh aroma|Vibrant color|100% pure spice|Rich flavor|Suitable for daily use",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p9.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/fbbf24/000000?text=Radhuni+Turmeric", SortOrder = 0 });
+        p9.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/fbbf24/000000?text=Radhuni+Turmeric", SortOrder = 0 });
         p9.Variants.Add(new ProductVariant { Stock = 450, Price = 85, Sku = "RAD-TURM-200G", Color = "Yellow" });
         products.Add(p9);
 
@@ -826,7 +842,7 @@ public class ProductSeedingService
             Features = "UHT processed|Rich taste|Long shelf life|Convenient packaging",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p10.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/ffffff/000000?text=Pran+Milk", SortOrder = 0 });
+        p10.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/ffffff/000000?text=Pran+Milk", SortOrder = 0 });
         p10.Variants.Add(new ProductVariant { Stock = 400, Price = 95, Sku = "PRAN-MILK-1L", Color = "White" });
         products.Add(p10);
 
@@ -867,7 +883,7 @@ public class ProductSeedingService
                CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 60))
            };
            
-           genProduct.Images.Add(new ProductImage { Url = $"https://via.placeholder.com/600x600/{random.Next(100000, 999999)}/ffffff?text={Uri.EscapeDataString(itemName)}", SortOrder = 0 });
+           genProduct.Images.Add(new ProductImage { Url = $"https://placehold.co/600x600/{random.Next(100000, 999999)}/ffffff?text={Uri.EscapeDataString(itemName)}", SortOrder = 0 });
            genProduct.Variants.Add(new ProductVariant { Stock = random.Next(20, 500), Price = price, Sku = genProduct.Slug, Color = "Standard" });
            products.Add(genProduct);
         }
@@ -880,7 +896,6 @@ public class ProductSeedingService
     {
         var products = new List<Product>();
         var random = new Random();
-        int sortOrder = 0;
 
 
         // Helper to find category or default
@@ -909,7 +924,7 @@ public class ProductSeedingService
             Features = "Rechargeable battery up to 5 hours|3-speed control|Quiet operation|Portable and lightweight",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p1.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/3b82f6/ffffff?text=Walton+TF18+Fan", SortOrder = 0 });
+        p1.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/3b82f6/ffffff?text=Walton+TF18+Fan", SortOrder = 0 });
         p1.Variants.Add(new ProductVariant { Stock = 90, Price = 3750, Sku = "WALT-FAN-TF18", Color = "White" });
         products.Add(p1);
 
@@ -929,7 +944,7 @@ public class ProductSeedingService
             Features = "9W low-power consumption|Long lifespan 15,000+ hours|Cool white illumination|Easy installation",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p2.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/f3f4f6/000000?text=Vision+9W+LED", SortOrder = 0 });
+        p2.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/f3f4f6/000000?text=Vision+9W+LED", SortOrder = 0 });
         p2.Variants.Add(new ProductVariant { Stock = 200, Price = 180, Sku = "VIS-LED-9W", Color = "White" });
         products.Add(p2);
 
@@ -949,7 +964,7 @@ public class ProductSeedingService
             Features = "BPA-free material|Lightweight and portable|Durable construction|Easy to clean",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p3.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/06b6d4/ffffff?text=RFL+Jug+3L", SortOrder = 0 });
+        p3.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/06b6d4/ffffff?text=RFL+Jug+3L", SortOrder = 0 });
         p3.Variants.Add(new ProductVariant { Stock = 180, Price = 210, Sku = "RFL-JUG-3L", Color = "Blue" });
         products.Add(p3);
 
@@ -969,7 +984,7 @@ public class ProductSeedingService
             Features = "Rust-resistant stainless steel|4 different sizes|Durable and sturdy|Easy to clean",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p4.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/9ca3af/ffffff?text=Kiam+Bowl+Set", SortOrder = 0 });
+        p4.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/9ca3af/ffffff?text=Kiam+Bowl+Set", SortOrder = 0 });
         p4.Variants.Add(new ProductVariant { Stock = 130, Price = 650, Sku = "KIAM-BOWL-4SET", Color = "Silver" });
         products.Add(p4);
 
@@ -989,7 +1004,7 @@ public class ProductSeedingService
             Features = "1.8L capacity|Auto shut-off safety feature|Fast boiling|Ergonomic handle|Stainless steel body",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p5.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/d1d5db/000000?text=Walton+Kettle+K18", SortOrder = 0 });
+        p5.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/d1d5db/000000?text=Walton+Kettle+K18", SortOrder = 0 });
         p5.Variants.Add(new ProductVariant { Stock = 110, Price = 1350, Sku = "WALT-KET-K18", Color = "Silver" });
         products.Add(p5);
 
@@ -1009,7 +1024,7 @@ public class ProductSeedingService
             Features = "Kills 99.9% germs|Moisturizing formula|Suitable for daily use|Refreshing fragrance",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p6.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/10b981/ffffff?text=Dettol+Soap", SortOrder = 0 });
+        p6.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/10b981/ffffff?text=Dettol+Soap", SortOrder = 0 });
         p6.Variants.Add(new ProductVariant { Stock = 250, Price = 170, Sku = "DET-SOAP-100G", Color = "Green" });
         products.Add(p6);
 
@@ -1029,7 +1044,7 @@ public class ProductSeedingService
             Features = "Anti-bacterial protection|Strengthens teeth|Freshens breath|Daily oral hygiene",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p7.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/ef4444/ffffff?text=Pepsodent", SortOrder = 0 });
+        p7.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/ef4444/ffffff?text=Pepsodent", SortOrder = 0 });
         p7.Variants.Add(new ProductVariant { Stock = 300, Price = 120, Sku = "PEP-TOOTH-200G", Color = "White" });
         products.Add(p7);
 
@@ -1049,7 +1064,7 @@ public class ProductSeedingService
             Features = "Herbal formula|Removes impurities|Controls acne|Gentle on skin",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p8.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/84cc16/ffffff?text=Himalaya+Face+Wash", SortOrder = 0 });
+        p8.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/84cc16/ffffff?text=Himalaya+Face+Wash", SortOrder = 0 });
         p8.Variants.Add(new ProductVariant { Stock = 200, Price = 230, Sku = "HIM-FACE-150ML", Color = "Green" });
         products.Add(p8);
 
@@ -1069,7 +1084,7 @@ public class ProductSeedingService
             Features = "100% pure cotton|Lightweight and breathable|Durable stitching|Traditional design",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p9.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/f8fafc/000000?text=Aarong+Panjabi", SortOrder = 0 });
+        p9.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/f8fafc/000000?text=Aarong+Panjabi", SortOrder = 0 });
         p9.Variants.Add(new ProductVariant { Stock = 70, Price = 2200, Sku = "AAR-PANJ-WHT", Color = "White" });
         products.Add(p9);
 
@@ -1089,7 +1104,7 @@ public class ProductSeedingService
             Features = "Durable synthetic leather|Comfortable cushioning|Non-slip rubber sole|Lightweight design",
             CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 15))
         };
-        p10.Images.Add(new ProductImage { Url = "https://via.placeholder.com/600x600/475569/ffffff?text=Bata+Shoes", SortOrder = 0 });
+        p10.Images.Add(new ProductImage { Url = "https://placehold.co/600x600/475569/ffffff?text=Bata+Shoes", SortOrder = 0 });
         p10.Variants.Add(new ProductVariant { Stock = 60, Price = 2490, Sku = "BATA-SHOE-881", Color = "Brown" });
         products.Add(p10);
 
@@ -1135,11 +1150,139 @@ public class ProductSeedingService
                CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 60))
            };
            
-           genProduct.Images.Add(new ProductImage { Url = $"https://via.placeholder.com/600x600/{random.Next(100000, 999999)}/ffffff?text={Uri.EscapeDataString(itemName)}", SortOrder = 0 });
+           genProduct.Images.Add(new ProductImage { Url = $"https://placehold.co/600x600/{random.Next(100000, 999999)}/ffffff?text={Uri.EscapeDataString(itemName)}", SortOrder = 0 });
            genProduct.Variants.Add(new ProductVariant { Stock = random.Next(10, 200), Price = price, Sku = genProduct.Slug, Color = "Standard" });
            products.Add(genProduct);
         }
 
         return products;
+    }
+    private async Task EnsureFlashSaleProductsAsync()
+    {
+        try
+        {
+            // Optimized check: stop counting if we have 24 items
+            var flashSaleCount = await _db.Products
+                .Where(p => p.DiscountPercent > 15)
+                .OrderBy(p => p.Id)
+                .Take(24)
+                .CountAsync();
+                
+            if (flashSaleCount < 24)
+            {
+                _logger.LogInformation($"Found only {flashSaleCount} Flash Sale items. Upgrading more products...");
+                
+                var candidates = await _db.Products
+                    .Where(p => p.DiscountPercent <= 15)
+                    .OrderBy(x => Guid.NewGuid())
+                    .Take(24) 
+                    .ToListAsync();
+
+                var random = new Random();
+                foreach (var prod in candidates)
+                {
+                    prod.DiscountPercent = random.Next(20, 50);
+                }
+                
+                if (candidates.Any())
+                {
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation($"Upgraded {candidates.Count} products to Flash Sale status.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ensuring Flash Sale products.");
+        }
+    }
+
+    private async Task EnsurePerformanceIndexesAsync()
+    {
+        try 
+        {
+            _logger.LogInformation("Verifying and repairing database schema...");
+            
+            // 1. Schema repairs from DbFixController
+            var repairs = new[]
+            {
+                // Fix Column Types for Indexing (must be done before creating indexes)
+                "IF EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[orders].[Carts]') AND name = 'UserId' AND max_length = -1) ALTER TABLE [orders].[Carts] ALTER COLUMN [UserId] nvarchar(450) NOT NULL;",
+                "IF EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[catalog].[Categories]') AND name = 'Slug' AND max_length = -1) ALTER TABLE [catalog].[Categories] ALTER COLUMN [Slug] nvarchar(150) NOT NULL;",
+                "IF EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[catalog].[Products]') AND name = 'Slug' AND max_length = -1) ALTER TABLE [catalog].[Products] ALTER COLUMN [Slug] nvarchar(150) NOT NULL;",
+                "IF EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[content].[HomepageSections]') AND name = 'Name' AND max_length = -1) ALTER TABLE [content].[HomepageSections] ALTER COLUMN [Name] nvarchar(255) NOT NULL;",
+                "IF EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[content].[HomepageSections]') AND name = 'Slug' AND max_length = -1) ALTER TABLE [content].[HomepageSections] ALTER COLUMN [Slug] nvarchar(150) NOT NULL;",
+
+                // Shipments columns
+                "IF NOT EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[shipping].[Shipments]') AND name = 'NumberOfBoxes') ALTER TABLE [shipping].[Shipments] ADD [NumberOfBoxes] int NOT NULL DEFAULT 1;",
+                "IF NOT EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[shipping].[Shipments]') AND name = 'PackageType') ALTER TABLE [shipping].[Shipments] ADD [PackageType] nvarchar(max) NULL;",
+                "IF NOT EXISTS(SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[shipping].[Shipments]') AND name = 'ShippedAt') ALTER TABLE [shipping].[Shipments] ADD [ShippedAt] datetime2 NULL;",
+                
+                // Wallets schema and tables
+                "IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'wallets') EXEC('CREATE SCHEMA [wallets]');",
+                @"IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[wallets].[SellerWallets]') AND type in (N'U'))
+                  BEGIN
+                      CREATE TABLE [wallets].[SellerWallets] (
+                          [Id] int NOT NULL IDENTITY,
+                          [SellerId] int NOT NULL,
+                          [AvailableBalance] decimal(18,2) NOT NULL,
+                          [PendingBalance] decimal(18,2) NOT NULL,
+                          [TotalEarnings] decimal(18,2) NOT NULL,
+                          [TotalWithdrawn] decimal(18,2) NOT NULL,
+                          [Currency] nvarchar(max) NOT NULL,
+                          [IsActive] bit NOT NULL,
+                          [CreatedAt] datetime2 NOT NULL,
+                          [UpdatedAt] datetime2 NULL,
+                          [CreatedBy] nvarchar(max) NULL,
+                          [UpdatedBy] nvarchar(max) NULL,
+                          [IsDeleted] bit NOT NULL,
+                          [DeletedAt] datetime2 NULL,
+                          CONSTRAINT [PK_SellerWallets] PRIMARY KEY ([Id]),
+                          CONSTRAINT [FK_SellerWallets_Sellers_SellerId] FOREIGN KEY ([SellerId]) REFERENCES [sellers].[Sellers] ([Id]) ON DELETE CASCADE
+                      );
+                  END"
+            };
+
+            foreach (var sql in repairs)
+            {
+                await _db.Database.ExecuteSqlRawAsync(sql);
+            }
+
+            _logger.LogInformation("Verifying and creating performance indexes...");
+            
+            var indexes = new[]
+            {
+                ("IX_Carts_UserId", "orders.Carts", "UserId"),
+                ("IX_Categories_Slug", "catalog.Categories", "Slug"),
+                ("IX_Products_Slug", "catalog.Products", "Slug"),
+                ("IX_Products_DiscountPercent", "catalog.Products", "DiscountPercent"),
+                ("IX_Products_IsActive", "catalog.Products", "IsActive"),
+                ("IX_Products_IsAdminProduct", "catalog.Products", "IsAdminProduct"),
+                ("IX_HomepageSections_Name", "content.HomepageSections", "Name"),
+                // Critical composite index for homepage performance
+                ("IX_Products_Active_Perf_Comp", "catalog.Products", "IsActive, TotalReviews DESC, AverageRating DESC")
+            };
+
+            foreach (var (indexName, tableName, columnName) in indexes)
+            {
+                // Ensure columns with spaces (sort directions) or commas (composite) are handled correctly
+                // We'll strip any existing brackets and apply them per-column if we wanted to be fancy, 
+                // but for now, passing the exact column string is more flexible for sort orders.
+                var formattedTable = tableName.Contains(".") ? tableName.Replace(".", "].[") : "dbo].[" + tableName;
+                var sql = $@"
+                    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = '{indexName}' AND object_id = OBJECT_ID(N'[{formattedTable}]'))
+                    BEGIN
+                        CREATE INDEX [{indexName}] ON [{formattedTable}] ({columnName});
+                    END";
+
+                await _db.Database.ExecuteSqlRawAsync(sql);
+            }
+            
+            _logger.LogInformation("Database initialization and performance indexing completed.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during database initialization/optimization.");
+        }
     }
 }

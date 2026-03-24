@@ -6,6 +6,7 @@
     Layout = null;
     var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
     var isBangla = langCookie == "bn";
+    var siteTitle = await SettingsService.GetValueAsync("SiteTitle", "Sparkle");
 }
 
 <!DOCTYPE html>
@@ -13,7 +14,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(isBangla ? "লগইন - স্পার্কল" : "Login - Sparkle")</title>
+    <title>@(isBangla ? $"লগইন - {siteTitle}" : $"Login - {siteTitle}")</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -81,7 +82,7 @@
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1100px;
+            max-width: min(850px, 95vw); /* Reduced max-width for more appropriate size */
             animation: slideUp 0.5s ease-out;
         }
 
@@ -93,18 +94,18 @@
         .login-container { 
             width: 100%; 
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 24px; 
+            border-radius: 20px; 
             box-shadow: var(--shadow-xl);
             overflow: hidden; 
             display: grid; 
             grid-template-columns: 0.85fr 1fr;
-            min-height: 650px;
+            min-height: 450px; /* Reduced min-height */
         }
 
         /* Left Side - Visual */
         .login-left { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            padding: 2.5rem 4rem 4rem 4rem; 
+            padding: 2rem; /* Reduced padding */
             color: white; 
             display: flex; 
             flex-direction: column; 
@@ -132,51 +133,76 @@
         }
 
         .brand-logo {
+            position: absolute;
+            top: 2.5rem;
+            left: 1.5rem;
+            z-index: 5;
             font-size: 2rem;
             font-weight: 800;
-            margin-bottom: 2.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-            align-self: flex-start;
+            
+            /* Glassmorphism Card Style */
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 4px 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .brand-logo:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        
+        .brand-logo img {
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
         }
 
         .user-icon-circle {
-            width: 90px;
-            height: 90px;
+            width: 80px; /* Reduced size */
+            height: 80px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 2rem auto;
+            margin: 0 auto 1rem auto; /* Reduced margin */
             border: 2px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             transition: all 0.3s ease;
         }
 
         .user-icon-circle img {
-            width: 60px;
-            height: 60px;
+            width: 50px; /* Reduced size */
+            height: 50px;
+            max-width: 100%;
             object-fit: contain;
             transition: all 0.3s ease;
         }
 
         .login-left h1 { 
-            font-size: 3rem; 
+            font-size: 2.2rem; /* Reduced font size */
             font-weight: 800; 
             line-height: 1.1;
-            margin-bottom: 1.5rem; 
+            margin-bottom: 1rem; /* Reduced margin */
             letter-spacing: -0.02em;
             text-align: center;
         }
 
         .login-left p { 
-            font-size: 1.1rem; 
+            font-size: 1rem; 
             opacity: 0.9; 
-            margin: 0 auto 3rem auto; 
-            line-height: 1.6;
+            margin: 0 auto 2rem auto; /* Reduced margin */
+            line-height: 1.5;
             max-width: 90%;
             text-align: center;
         }
@@ -210,7 +236,7 @@
 
         /* Right Side - Form */
         .login-right { 
-            padding: 3rem 4rem; 
+            padding: 2rem; /* Reduced padding */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -218,12 +244,12 @@
         }
 
         .login-header {
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.5rem; /* Reduced margin */
             text-align: center;
         }
 
         .login-header h2 {
-            font-size: 2rem;
+            font-size: 1.75rem; /* Reduced font size */
             font-weight: 700;
             color: var(--text-dark);
             margin-bottom: 0.5rem;
@@ -238,15 +264,15 @@
         .login-type-toggle { 
             display: flex; 
             background: var(--input-bg);
-            padding: 0.35rem;
+            padding: 0.25rem; /* Reduced padding */
             border-radius: 12px;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem; /* Reduced margin */
             position: relative;
         }
 
         .login-type-btn { 
             flex: 1; 
-            padding: 0.75rem; 
+            padding: 0.5rem; /* Reduced padding */ 
             border: none; 
             border-radius: 10px; 
             background: transparent; 
@@ -272,7 +298,7 @@
         }
 
         /* Form Elements */
-        .form-group { margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.25rem; } /* Reduced margin */
         
         .form-label { 
             font-size: 0.9rem; 
@@ -287,11 +313,11 @@
         }
 
         .form-control { 
-            height: 50px;
+            height: 45px; /* Standardized height */
             border: 2px solid var(--border-color); 
             border-radius: 12px; 
             padding: 0 2.75rem 0 2.75rem; /* Added right padding for toggle */
-            font-size: 1rem; 
+            font-size: 0.95rem; 
             width: 100%; 
             transition: all 0.2s; 
             background: var(--input-bg);
@@ -318,6 +344,13 @@
 
         .form-control:focus + .input-icon {
             color: var(--primary-color);
+        }
+
+        /* Hide browser's native password reveal icon */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear,
+        input[type="password"]::-webkit-credentials-auto-fill-button {
+            display: none !important;
         }
 
         .password-toggle { 
@@ -366,8 +399,8 @@
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); 
             border: none; 
             border-radius: 12px; 
-            height: 50px;
-            font-size: 1rem; 
+            height: 45px; /* Standardized height */
+            font-size: 0.95rem; 
             font-weight: 600; 
             color: white; 
             width: 100%; 
@@ -410,7 +443,7 @@
             background: white; 
             border: 2px solid var(--border-color); 
             border-radius: 12px; 
-            height: 50px;
+            height: 45px; /* Standardized height */
             font-size: 0.95rem; 
             color: var(--text-dark); 
             width: 100%; 
@@ -449,8 +482,8 @@
         /* Alerts */
         .alert { 
             border-radius: 12px; 
-            padding: 1rem; 
-            margin-bottom: 1.5rem; 
+            padding: 0.75rem; /* Reduced padding */
+            margin-bottom: 1.25rem; 
             font-size: 0.9rem; 
             border: none;
             display: flex;
@@ -503,13 +536,113 @@
             transform: translateX(-3px); 
         }
 
-        /* Responsive */
-        @@media (max-width: 992px) {
-            .login-container { grid-template-columns: 1fr; max-width: 500px; min-height: auto; }
-            .login-left { display: none; }
-            .login-right { padding: 3rem 2rem; }
-            .nav-back { color: var(--text-dark); background: white; box-shadow: var(--shadow-md); }
+        /* Responsive Design - Progressive Enhancement */
+        
+        /* Laptop (1200px - 1439px) - Slightly scale down */
+        /* Modified media queries for new sizes */
+        @@media (max-width: 1439px) and (min-width: 1200px) {
+            .auth-wrapper { max-width: 850px; }
+            .login-left { padding: 2.5rem; }
+            .login-right { padding: 2.5rem; }
         }
+        
+        /* Small Laptop (992px - 1199px) - More condensed */
+        @@media (max-width: 1199px) and (min-width: 992px) {
+            .auth-wrapper { max-width: 800px; }
+            .login-container { grid-template-columns: 40% 60%; }
+            .login-left { padding: 2rem; }
+            .login-right { padding: 2rem; }
+            .login-left h1 { font-size: 2rem; }
+        }
+        
+        /* Tablet (768px - 991px) - Hide left panel */
+        @@media (max-width: 991px) and (min-width: 768px) {
+            .login-container { 
+                grid-template-columns: 1fr; 
+                max-width: 600px; 
+                min-height: auto; 
+            }
+            .login-left { display: none; }
+            .login-right { padding: 3rem 2.5rem; }
+            .nav-back { 
+                color: var(--text-dark); 
+                background: white; 
+                box-shadow: var(--shadow-md); 
+            }
+        }
+        
+        /* Mobile (max-width: 767px) - Full mobile optimization */
+        @@media (max-width: 767px) {
+            body { padding: 1rem; }
+            .login-container { 
+                grid-template-columns: 1fr; 
+                max-width: 100%; 
+                min-height: auto;
+                border-radius: 20px;
+            }
+            .login-left { display: none; }
+            .login-right { padding: 2rem 1.5rem; }
+            .login-header h2 { font-size: 1.75rem; }
+            .form-group { margin-bottom: 1.25rem; }
+            .nav-back { 
+                color: var(--text-dark); 
+                background: white; 
+                box-shadow: var(--shadow-md);
+                top: 1.5rem;
+                left: 1.5rem;
+            }
+        }
+        /* Modern Validation Styles */
+        .field-validation-error,
+        .text-danger:not(:empty) {
+            display: flex !important;
+            align-items: center;
+            margin-top: 8px;
+            padding: 10px 14px;
+            background-color: #fff1f2;
+            border: 1px solid #fb7185;
+            border-left: 4px solid #e11d48;
+            border-radius: 8px;
+            color: #be123c !important;
+            font-size: 0.85rem !important;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            animation: errorSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .field-validation-error::before,
+        .text-danger:not(:empty)::before {
+            content: '';
+            display: inline-block;
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23e11d48' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .field-validation-valid {
+            display: none !important;
+        }
+        
+        .input-validation-error {
+            border-color: #e11d48 !important;
+            background-color: #fff1f2 !important;
+        }
+        
+        .input-validation-error:focus {
+            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15) !important;
+        }
+
+        @@keyframes errorSlideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    
     </style>
 </head>
 <body>
@@ -519,10 +652,10 @@
         <div class="login-container">
             <!-- Left Side -->
             <div class="login-left">
+                <div class="brand-logo">
+                    <img src="~/images/logo.png" alt="@siteTitle" style="height: 50px; width: auto;" asp-append-version="true" />
+                </div>
                 <div class="login-left-content">
-                    <div class="brand-logo">
-                        <img src="/images/logo.png" alt="Sparkle" style="height: 60px; width: auto;" />
-                    </div>
                     <div class="user-icon-circle">
                         <img src="/images/user-icon.png" alt="User" id="loginIcon" />
                     </div>
@@ -568,6 +701,8 @@
                     </button>
                 </div>
 
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
                 <form method="post" asp-action="Login" asp-controller="Auth">
                     <input type="hidden" asp-for="ReturnUrl" />
                     <input type="hidden" name="loginType" id="loginTypeField" value="user" />
@@ -584,17 +719,16 @@
                     <div class="form-group">
                         <label asp-for="Password" class="form-label">@(isBangla ? "পাসওয়ার্ড" : "Password")</label>
                         <div class="input-group-custom">
-                            <input asp-for="Password" type="password" class="form-control" id="password" placeholder="••••••••" />
-                            <i class="bi bi-lock input-icon"></i>
+                            <input asp-for="Password" type="password" class="form-control" id="password" placeholder="@(isBangla ? "পাসওয়ার্ড" : "Password")" style="padding-left: 1rem;" />
                             <i class="bi bi-eye password-toggle" id="togglePassword"></i>
                         </div>
                         <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                     </div>
 
                     <div class="remember-forgot">
-                        <div class="form-check">
-                            <input asp-for="RememberMe" class="form-check-input" type="checkbox" />
-                            <label class="form-check-label text-muted" asp-for="RememberMe">
+                        <div class="form-check d-flex align-items-center">
+                            <input asp-for="RememberMe" class="form-check-input me-2" type="checkbox" id="rememberMeCheckbox" />
+                            <label class="form-check-label text-muted mb-0" for="rememberMeCheckbox" style="cursor: pointer;">
                                 @(isBangla ? "মনে রাখুন" : "Remember me")
                             </label>
                         </div>
@@ -651,20 +785,55 @@
 
             if (!buttons || !loginTypeField) return;
 
+            // Store input values for each mode separated
+            const loginData = {
+                user: { email: '', password: '' },
+                seller: { email: '', password: '' }
+            };
+
+            // AUTO-SWITCH: Check URL for ?type=seller
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('type') === 'seller') {
+                const sellerBtn = document.querySelector('.login-type-btn[data-type="seller"]');
+                if (sellerBtn) {
+                    // Slight delay to ensure UI is ready
+                    setTimeout(() => sellerBtn.click(), 50); 
+                }
+            }
+
             buttons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const type = btn.getAttribute('data-type') || 'user';
+                    const newType = btn.getAttribute('data-type') || 'user';
+                    
+                    // 1. Get current active type
+                    const currentActiveBtn = document.querySelector('.login-type-btn.active');
+                    const currentType = currentActiveBtn ? (currentActiveBtn.getAttribute('data-type') || 'user') : 'user';
 
+                    // 2. Save current input values to state
+                    const emailInput = document.getElementById('Email');
+                    const passInput = document.getElementById('password');
+                    
+                    if (emailInput && passInput) {
+                        loginData[currentType].email = emailInput.value;
+                        loginData[currentType].password = passInput.value;
+                    }
+
+                    // 3. Update UI classes
                     buttons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    loginTypeField.value = type;
+                    loginTypeField.value = newType;
 
-                    if (type === 'seller') {
+                    // 4. Restore values for new type
+                    if (emailInput && passInput) {
+                        emailInput.value = loginData[newType].email || '';
+                        passInput.value = loginData[newType].password || '';
+                    }
+
+                    // 5. Theme and UI changes
+                    if (newType === 'seller') {
                         document.body.classList.add('seller-theme');
-                        // Hide Google login for sellers (only available for users)
                         if (googleSection) googleSection.style.display = 'none';
                         if (sellerNotice) sellerNotice.style.display = 'flex';
-                        // Change icon to seller icon
                         if (loginIcon) {
                             loginIcon.src = '/images/seller-icon.png';
                             loginIcon.alt = 'Seller';
@@ -672,10 +841,8 @@
                         if (signupLink) signupLink.href = '/auth/register-seller';
                     } else {
                         document.body.classList.remove('seller-theme');
-                        // Show Google login for users (if configured)
                         if (googleSection) googleSection.style.display = '';
                         if (sellerNotice) sellerNotice.style.display = 'none';
-                        // Change icon back to user
                         if (loginIcon) {
                             loginIcon.src = '/images/user-icon.png';
                             loginIcon.alt = 'User';
@@ -693,6 +860,30 @@
                     passwordInput.setAttribute('type', type);
                     this.classList.toggle('bi-eye');
                     this.classList.toggle('bi-eye-slash');
+                });
+            }
+
+            // Email Logic for Login
+            const emailField = document.getElementById('Email');
+            if(emailField) {
+                emailField.addEventListener('blur', function(e) {
+                    const val = e.target.value.trim();
+                    const span = document.querySelector('span[data-valmsg-for="Email"]');
+                    const emailRegex = /^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                    
+                    if (val.length > 0) {
+                         if (!emailRegex.test(val) || val.toLowerCase().endsWith('.co')) {
+                              if (span) {
+                                  span.textContent = "Invalid email format";
+                                  span.className = "text-danger field-validation-error small";
+                              }
+                         } else {
+                              if (span && span.textContent === "Invalid email format") {
+                                  span.textContent = "";
+                                  span.className = "text-danger field-validation-valid small";
+                              }
+                         }
+                    }
                 });
             }
         })();

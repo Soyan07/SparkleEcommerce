@@ -1,0 +1,467 @@
+@{
+    Layout = null;
+    var orderIds = ViewBag.OrderIds;
+    var amount = ViewBag.Amount;
+    var trxIdx = ViewBag.TrxIdx;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSLCommerz Payment Gateway</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ssl-blue: #0076a3;
+            --ssl-bg: #f4f6f9;
+            --ssl-border: #e2e8f0;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--ssl-bg);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Gateway Container */
+        .gateway-container {
+            width: 900px;
+            max-width: 95vw;
+            height: 600px;
+            max-height: 90vh;
+            background: white;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Top Header (Mobile Only) */
+        .mobile-header { display: none; }
+
+        /* Left Sidebar: Merchant Info & Order Summary */
+        .sidebar {
+            width: 320px;
+            background: #f8fbfd;
+            border-right: 1px solid var(--ssl-border);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .merchant-logo {
+            max-width: 140px;
+            margin-bottom: 20px;
+        }
+
+        .order-summary h6 {
+            color: #64748b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .order-summary .merchant-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .order-summary .trx-info {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--ssl-border);
+            margin: 20px 0;
+        }
+
+        .total-pay {
+            margin-top: auto;
+        }
+
+        .total-pay label {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .total-pay .amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--ssl-blue);
+            line-height: 1.2;
+        }
+
+        .total-pay .currency {
+            font-size: 16px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        /* Right Content: Payment Options */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--ssl-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+        }
+
+        .content-header h5 { margin: 0; font-weight: 600; color: #334155; }
+        
+        .ssl-logo-top {
+            height: 32px;
+        }
+
+        .payment-tabs {
+            display: flex;
+            padding: 0 30px;
+            background: #fdfdfd;
+            border-bottom: 1px solid var(--ssl-border);
+            gap: 20px;
+        }
+
+        .tab-btn {
+            padding: 15px 0;
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--ssl-blue);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--ssl-blue);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .payment-body {
+            padding: 30px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Card Form */
+        .card-logos {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        .card-img { height: 32px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .form-label { font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px; }
+        .form-control {
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            padding: 10px 14px;
+            font-size: 14px;
+        }
+        .form-control:focus {
+            border-color: var(--ssl-blue);
+            box-shadow: 0 0 0 3px rgba(0, 118, 163, 0.1);
+        }
+
+        .pay-btn-wrapper {
+            margin-top: 20px;
+        }
+
+        .btn-pay {
+            width: 100%;
+            background: var(--ssl-blue);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-pay:hover { background: #005f85; }
+
+        .secure-footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .cancel-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #ef4444;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* MFS Grid */
+        .mfs-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .mfs-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mfs-item:hover {
+            border-color: var(--ssl-blue);
+            background: #f0f9ff;
+        }
+
+        .mfs-item img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            margin-bottom: 8px;
+        }
+
+        .mfs-item span {
+            font-size: 12px;
+            font-weight: 500;
+            color: #475569;
+        }
+
+        @@media (max-width: 768px) {
+            .gateway-container { flex-direction: column; height: 100vh; max-height: 100vh; border-radius: 0; width: 100%; }
+            .sidebar { width: 100%; padding: 15px 20px; border-right: none; border-bottom: 1px solid var(--ssl-border); flex-direction: row; align-items: center; justify-content: space-between; height: auto; min-height: 80px; }
+            .merchant-logo { margin-bottom: 0; max-height: 40px; }
+            .order-summary { display: none; }
+            .total-pay .amount { font-size: 20px; }
+            .total-pay label { display: none; }
+            .payment-body { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="gateway-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div>
+                <img src="/images/logo.png" alt="Merchant Logo" class="merchant-logo">
+                <div class="order-summary">
+                    <h6>Merchant Name</h6>
+                    <div class="merchant-name">Sparkle Ecommerce</div>
+                    <div class="trx-info">Order #REF-@(orderIds.Split(',').FirstOrDefault())</div>
+                </div>
+            </div>
+            
+            <div class="total-pay">
+                <label>Total Payable:</label>
+                <div>
+                    <span class="currency">BDT</span>
+                    <span class="amount">@amount</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <div class="content-header">
+                <h5>Payment Options</h5>
+                <img src="https://securepay.sslcommerz.com/public/image/sslcommerz.png" alt="SSLCommerz" class="ssl-logo-top">
+            </div>
+
+            <div class="payment-tabs">
+                <button class="tab-btn active" onclick="switchTab('cards')">Cards</button>
+                <button class="tab-btn" onclick="switchTab('mfs')">Mobile Banking</button>
+                <button class="tab-btn" onclick="switchTab('net')">Net Banking</button>
+            </div>
+
+            <div class="payment-body" id="view-cards">
+                <div class="card-logos">
+                    <img src="https://securepay.sslcommerz.com/public/image/visa.png" class="card-img">
+                    <img src="https://securepay.sslcommerz.com/public/image/mastercard.png" class="card-img">
+                    <img src="https://securepay.sslcommerz.com/public/image/amex.png" class="card-img">
+                </div>
+
+                <form id="paymentForm" method="post" action="/payment/process">
+                    <input type="hidden" name="orderIds" value="@orderIds">
+                    <input type="hidden" name="status" id="paymentStatus" value="success">
+
+                    <div class="mb-3">
+                        <label class="form-label">Card Number</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            <span class="input-group-text bg-white border-start-0"><i class="bi bi-credit-card"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="mb-3">
+                                <label class="form-label">Expiration</label>
+                                <input type="text" class="form-control" placeholder="MM / YY" maxlength="5" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-3">
+                                <label class="form-label">CVV / CVC</label>
+                                <input type="password" class="form-control" placeholder="123" maxlength="4" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Card Holder Name</label>
+                        <input type="text" class="form-control" placeholder="Name on Card" required>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="saveCard">
+                        <label class="form-check-label text-muted small" for="saveCard">
+                            Save this card for faster future comments
+                        </label>
+                    </div>
+
+                    <div class="pay-btn-wrapper">
+                        <button type="button" onclick="processPayment()" class="btn-pay">
+                            <i class="bi bi-lock-fill"></i> Pay @amount BDT
+                        </button>
+                    </div>
+                </form>
+
+                <div onclick="cancelPayment()" class="cancel-link">Cancel Transaction</div>
+                
+                <div class="secure-footer">
+                    <i class="bi bi-shield-lock-fill"></i> 100% Secure Payment | PCI DSS Compliant
+                </div>
+            </div>
+
+            <!-- MFS Mock View -->
+            <div class="payment-body" id="view-mfs" style="display: none;">
+                <div class="mfs-grid">
+                    <div class="mfs-item" onclick="selectMfs('bkash')">
+                        <img src="https://securepay.sslcommerz.com/public/image/bkash.png" alt="Bkash">
+                        <span>bKash</span>
+                    </div>
+                    <div class="mfs-item" onclick="selectMfs('nagad')">
+                        <img src="https://securepay.sslcommerz.com/public/image/nagad.png" alt="Nagad">
+                        <span>Nagad</span>
+                    </div>
+                     <div class="mfs-item" onclick="selectMfs('rocket')">
+                        <img src="https://securepay.sslcommerz.com/public/image/rocket.png" alt="Rocket">
+                        <span>Rocket</span>
+                    </div>
+                </div>
+                 <div class="text-center mt-5 text-muted small">Select your mobile wallet to proceed</div>
+            </div>
+            
+             <div class="payment-body" id="view-net" style="display: none;">
+                 <div class="text-center mt-5 text-muted">
+                     <i class="bi bi-bank fs-1"></i>
+                     <p class="mt-3">Net banking options are currently unavailable in demo mode.</p>
+                 </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div id="processingOverlay" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.9); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+        <h5 class="mt-3 text-dark">Processing Payment...</h5>
+        <p class="text-muted">Please do not close this window.</p>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.payment-body').forEach(b => b.style.display = 'none');
+            
+            document.querySelector(`button[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`view-${tab}`).style.display = 'block';
+        }
+
+        function processPayment() {
+            // Validate inputs mock
+            const inputs = document.querySelectorAll('#paymentForm input[required]');
+            let valid = true;
+            inputs.forEach(i => {
+                if(!i.value) { i.style.borderColor = 'red'; valid = false; }
+                else { i.style.borderColor = '#cbd5e1'; }
+            });
+
+            if(!valid) return;
+
+            // Show Processing Spinner
+            document.getElementById('processingOverlay').style.display = 'flex';
+            
+            // Simulate delay
+            setTimeout(() => {
+                document.getElementById('paymentForm').submit();
+            }, 2000);
+        }
+
+        function cancelPayment() {
+            if(confirm('Are you sure you want to cancel the transaction?')) {
+                const form = document.getElementById('paymentForm');
+                document.getElementById('paymentStatus').value = 'fail';
+                form.submit();
+            }
+        }
+        
+        function selectMfs(type) {
+             // Mock MFS selection flow
+             document.getElementById('processingOverlay').style.display = 'flex';
+             setTimeout(() => {
+                document.getElementById('paymentForm').submit();
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

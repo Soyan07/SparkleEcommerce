@@ -31,11 +31,15 @@ public class OrderController : Controller
 
         var userId = GetUserId();
         var query = _db.Orders
+            .Include(o => o.Seller)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                    .ThenInclude(p => p.Images)
             .Where(o => o.UserId == userId);
 
         var totalCount = await query.CountAsync();
         var orders = await query
-            .OrderByDescending(o => o.CreatedAt)
+            .OrderByDescending(o => o.OrderDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -58,8 +62,12 @@ public class OrderController : Controller
     {
         var userId = GetUserId();
         var order = await _db.Orders
+            .Include(o => o.Seller)
             .Include(o => o.ShippingAddress)
-            .Include(o => o.Items)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                    .ThenInclude(p => p.Images)
+            .Include(o => o.Shipments)
             .FirstOrDefaultAsync(o => o.Id == id && o.UserId == userId);
 
         if (order == null)
@@ -70,21 +78,35 @@ public class OrderController : Controller
         return View(order);
     }
 
-    [HttpGet("confirmation/{id:int}")]
+    [HttpGet("confirmation")]
     [AllowAnonymous]
-    public async Task<IActionResult> Confirmation(int id)
+    public async Task<IActionResult> Confirmation(string? ids, int? id)
     {
-        var order = await _db.Orders
-            .Include(o => o.ShippingAddress)
-            .Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.Id == id);
+        if (id.HasValue && string.IsNullOrEmpty(ids)) ids = id.Value.ToString();
+        if (string.IsNullOrEmpty(ids)) return Redirect("/");
 
-        if (order == null)
+        var idList = ids.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => int.TryParse(s, out var val) ? val : 0)
+            .Where(v => v > 0)
+            .ToList();
+
+        if (!idList.Any()) return Redirect("/");
+
+        var orders = await _db.Orders
+            .Include(o => o.Seller)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                    .ThenInclude(p => p.Images)
+            .Where(o => idList.Contains(o.Id))
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
+
+        if (!orders.Any())
         {
             return NotFound();
         }
 
-        return View(order);
+        return View(orders);
     }
 
     [HttpGet("track/{id:int}")]
@@ -92,8 +114,11 @@ public class OrderController : Controller
     public async Task<IActionResult> Track(int id)
     {
         var order = await _db.Orders
+            .Include(o => o.Seller)
             .Include(o => o.ShippingAddress)
-            .Include(o => o.Items)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                    .ThenInclude(p => p.Images)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)

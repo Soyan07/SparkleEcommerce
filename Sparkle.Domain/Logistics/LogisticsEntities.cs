@@ -34,7 +34,7 @@ namespace Sparkle.Domain.Logistics
 
         public int ZoneId { get; set; }
         [ForeignKey("ZoneId")]
-        public virtual DeliveryZone Zone { get; set; }
+        public virtual DeliveryZone Zone { get; set; } = null!;
 
         [Required]
         [MaxLength(100)]

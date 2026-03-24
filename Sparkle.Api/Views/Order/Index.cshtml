@@ -1,133 +1,200 @@
 @model Sparkle.Api.Controllers.OrderController.PagedUserOrdersViewModel
 @{
+    ViewData["Title"] = "My Orders";
+    Layout = "~/Views/Shared/_ProfileLayout.cshtml";
     var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
     var isBangla = langCookie == "bn";
-    ViewData["Title"] = isBangla ? "আমার অর্ডার" : "My Orders";
 }
 
-<div class="container my-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+    .orders-page { font-family: 'Inter', -apple-system, sans-serif; }
+
+    .order-card {
+        background: #fff;
+        border: 1px solid #f1f5f9;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 8px;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        text-decoration: none !important;
+        display: block;
+        color: inherit !important;
+    }
+    .order-card:hover {
+        border-color: #fed7aa;
+        box-shadow: 0 2px 8px rgba(249,115,22,0.06);
+    }
+
+    .shop-icon {
+        width: 30px; height: 30px;
+        border-radius: 7px;
+        display: flex; align-items: center; justify-content: center;
+        background: #fff7ed; color: #f97316;
+        font-size: 0.85rem; flex-shrink: 0;
+    }
+
+    .order-shop-name { font-size: 0.875rem; font-weight: 600; color: #1e293b; }
+    .order-date { font-size: 0.75rem; color: #94a3b8; }
+    .order-number { font-size: 0.72rem; color: #64748b; font-family: 'JetBrains Mono', monospace; background: #f8fafc; padding: 2px 6px; border-radius: 4px; }
+    .order-items-count { font-size: 0.75rem; color: #64748b; }
+    .order-total { font-size: 0.85rem; font-weight: 600; color: #f97316; }
+
+    .status-tag {
+        font-size: 0.6rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.04em;
+        padding: 2px 7px; border-radius: 3px;
+        line-height: 1.2;
+    }
+    .st-pending { background: #fffbeb; color: #b45309; }
+    .st-confirmed, .st-processing { background: #eff6ff; color: #1d4ed8; }
+    .st-packed { background: #eef2ff; color: #4338ca; }
+    .st-shipped { background: #f5f3ff; color: #6d28d9; }
+    .st-delivered { background: #f0fdf4; color: #15803d; }
+    .st-cancelled { background: #fef2f2; color: #b91c1c; }
+
+    .thumb-strip { display: flex; gap: 5px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #f1f5f9; }
+    .thumb-strip img { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; border: 1px solid #f1f5f9; background: #f8fafc; }
+    .thumb-strip .more { width: 36px; height: 36px; border-radius: 6px; background: #f8fafc; color: #64748b; font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1px solid #f1f5f9; }
+
+    .view-link { font-size: 0.7rem; color: #f97316; font-weight: 500; }
+
+    .pg-btn {
+        width: 28px; height: 28px; border-radius: 5px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.72rem; color: #64748b; background: #fff;
+        border: 1px solid #e2e8f0; transition: all 0.15s;
+        text-decoration: none;
+    }
+    .pg-btn:hover:not(.disabled) { border-color: #f97316; color: #f97316; }
+    .pg-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
+    .pg-btn.disabled { opacity: 0.4; cursor: default; }
+
+    .shop-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 18px; border-radius: 6px;
+        background: #f97316; color: #fff; font-size: 0.85rem;
+        font-weight: 600; text-decoration: none; transition: all 0.15s;
+        border: none; line-height: 1;
+    }
+    .shop-btn i { font-size: 0.85rem; }
+    .shop-btn:hover { background: #ea580c; color: #fff; }
+</style>
+
+<div class="orders-page">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
-            <h2 class="fw-bold mb-1">
-                <i class="bi bi-bag-check-fill text-primary"></i>
-                @(isBangla ? "আমার অর্ডার" : "My Orders")
-            </h2>
-            <p class="text-muted mb-0">@(isBangla ? "আপনার সকল অর্ডারের তালিকা" : "View all your orders")</p>
+            <h6 class="fw-bold mb-0" style="color: #1e293b; font-size: 1rem;">@(isBangla ? "আমার অর্ডার" : "My Orders")</h6>
+            <p class="mb-0" style="font-size: 0.78rem; color: #94a3b8;">@(isBangla ? "আপনার অর্ডার ট্র্যাক করুন" : "Track and manage your orders")</p>
         </div>
-        <a href="/" class="btn btn-outline-primary">
-            <i class="bi bi-house"></i> @(isBangla ? "হোমপেজে যান" : "Back to Home")
+        <a href="/" class="shop-btn">
+            <i class="bi bi-cart3"></i> @(isBangla ? "শপ করুন" : "Shop Now")
         </a>
     </div>
 
     @if (!Model.Items.Any())
     {
-        <div class="text-center py-5 bg-white rounded-3 shadow-sm">
-            <i class="bi bi-cart-x" style="font-size: 4rem; color: #cbd5e0;"></i>
-            <h4 class="mt-3 mb-2">@(isBangla ? "কোন অর্ডার নেই" : "No Orders Yet")</h4>
-            <p class="text-muted mb-4">@(isBangla ? "আপনি এখনো কোন অর্ডার করেননি।" : "You haven't placed any orders yet.")</p>
-            <a href="/" class="btn btn-primary btn-lg px-4">
-                <i class="bi bi-shop"></i> @(isBangla ? "শপিং শুরু করুন" : "Start Shopping")
-            </a>
+        <div class="text-center py-4">
+            <div class="mx-auto mb-2" style="width: 48px; height: 48px; background: #f8fafc; color: #94a3b8; font-size: 1.4rem; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-bag-x"></i>
+            </div>
+            <h6 class="fw-bold mb-0" style="font-size: 0.85rem; color: #1e293b;">@(isBangla ? "কোন অর্ডার নেই" : "No orders found")</h6>
+            <p class="mb-3" style="font-size: 0.78rem; color: #94a3b8;">@(isBangla ? "আপনি এখনো কোন অর্ডার করেননি।" : "Start shopping to see your orders here.")</p>
+            <a href="/" class="shop-btn">Start Shopping</a>
         </div>
     }
     else
     {
-        <div class="row g-3">
-            @foreach (var order in Model.Items)
+        @foreach (var order in Model.Items)
+        {
+            var statusClass = order.Status.ToString() switch
             {
-                var statusClass = order.Status switch
-                {
-                    Sparkle.Domain.Orders.OrderStatus.Pending => "warning",
-                    Sparkle.Domain.Orders.OrderStatus.Processing => "info",
-                    Sparkle.Domain.Orders.OrderStatus.Shipped => "primary",
-                    Sparkle.Domain.Orders.OrderStatus.Delivered => "success",
-                    Sparkle.Domain.Orders.OrderStatus.Cancelled => "danger",
-                    _ => "secondary"
-                };
+                "Pending" => "st-pending",
+                "Confirmed" => "st-confirmed",
+                "Processing" => "st-processing",
+                "Packed" => "st-packed",
+                "Shipped" => "st-shipped",
+                "Delivered" => "st-delivered",
+                "Cancelled" => "st-cancelled",
+                _ => "st-pending"
+            };
 
-                var statusText = order.Status switch
-                {
-                    Sparkle.Domain.Orders.OrderStatus.Pending => isBangla ? "পেন্ডিং" : "Pending",
-                    Sparkle.Domain.Orders.OrderStatus.Processing => isBangla ? "প্রসেসিং" : "Processing",
-                    Sparkle.Domain.Orders.OrderStatus.Shipped => isBangla ? "শিপড" : "Shipped",
-                    Sparkle.Domain.Orders.OrderStatus.Delivered => isBangla ? "ডেলিভার হয়েছে" : "Delivered",
-                    Sparkle.Domain.Orders.OrderStatus.Cancelled => isBangla ? "বাতিল" : "Cancelled",
-                    _ => "Unknown"
-                };
+            var shopName = order.Seller?.ShopName ?? "Sparkle Shop";
+            var itemCount = order.OrderItems?.Sum(i => i.Quantity) ?? 0;
 
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-2">
-                                    <h6 class="mb-1 text-muted small">@(isBangla ? "অর্ডার নং" : "Order")</h6>
-                                    <strong class="text-primary">#@order.Id</strong>
-                                </div>
-                                <div class="col-md-2">
-                                    <h6 class="mb-1 text-muted small">@(isBangla ? "তারিখ" : "Date")</h6>
-                                    <span>@order.CreatedAt.ToString("dd MMM yyyy")</span>
-                                </div>
-                                <div class="col-md-2">
-                                    <h6 class="mb-1 text-muted small">@(isBangla ? "মোট" : "Total")</h6>
-                                    <strong class="text-success">৳ @order.TotalAmount.ToString("N0")</strong>
-                                </div>
-                                <div class="col-md-2">
-                                    <h6 class="mb-1 text-muted small">@(isBangla ? "পেমেন্ট" : "Payment")</h6>
-                                    <span class="badge bg-@(order.PaymentStatus == Sparkle.Domain.Orders.PaymentStatus.Paid ? "success" : "warning")">
-                                        @(order.PaymentStatus == Sparkle.Domain.Orders.PaymentStatus.Paid 
-                                            ? (isBangla ? "পেইড" : "Paid") 
-                                            : (isBangla ? "পেন্ডিং" : "Pending"))
-                                    </span>
-                                </div>
-                                <div class="col-md-2">
-                                    <h6 class="mb-1 text-muted small">@(isBangla ? "স্ট্যাটাস" : "Status")</h6>
-                                    <span class="badge bg-@statusClass">@statusText</span>
-                                </div>
-                                <div class="col-md-2 text-end">
-                                    <a href="/orders/@order.Id" class="btn btn-sm btn-outline-primary mb-1 w-100">
-                                        <i class="bi bi-eye"></i> @(isBangla ? "বিস্তারিত" : "Details")
-                                    </a>
-                                    <a href="/orders/track/@order.Id" class="btn btn-sm btn-outline-secondary w-100">
-                                        <i class="bi bi-truck"></i> @(isBangla ? "ট্র্যাক" : "Track")
-                                    </a>
-                                </div>
-                            </div>
+            <a href="/orders/@order.Id" class="order-card">
+                <!-- Row 1: Shop + Status -->
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="shop-icon"><i class="bi bi-shop"></i></div>
+                        <div>
+                            <div class="order-shop-name">@shopName</div>
+                            <div class="order-date">@order.OrderDate.ToString("d MMM, yyyy • h:mm tt")</div>
                         </div>
                     </div>
+                    <span class="status-tag @statusClass">@order.Status</span>
                 </div>
-            }
-        </div>
 
-        @if (Model.TotalPages > 1)
-        {
-            <nav class="mt-4">
-                <ul class="pagination justify-content-center">
-                    @if (Model.Page > 1)
-                    {
-                        <li class="page-item">
-                            <a class="page-link" href="/orders?page=@(Model.Page - 1)">
-                                <i class="bi bi-chevron-left"></i> @(isBangla ? "পূর্ববর্তী" : "Previous")
-                            </a>
-                        </li>
-                    }
+                <!-- Row 2: Order number + items + total -->
+                <div class="d-flex align-items-center justify-content-between mt-2">
+                    <span class="order-number">#@order.OrderNumber</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="order-items-count">@itemCount @(itemCount == 1 ? "item" : "items")</span>
+                        <span class="order-total">৳@order.TotalAmount.ToString("N0")</span>
+                    </div>
+                </div>
 
-                    @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
-                    {
-                        <li class="page-item @(i == Model.Page ? "active" : "")">
-                            <a class="page-link" href="/orders?page=@i">@i</a>
-                        </li>
-                    }
+                <!-- Row 3: Thumbnails -->
+                @if (order.OrderItems != null && order.OrderItems.Any())
+                {
+                    <div class="thumb-strip">
+                        @foreach (var item in order.OrderItems.Take(5))
+                        {
+                            <img src="@(!string.IsNullOrEmpty(item.ProductImage) ? item.ProductImage : (item.Product?.Images?.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url ?? "https://placehold.co/100"))" alt="" />
+                        }
+                        @if (order.OrderItems.Count > 5)
+                        {
+                            <div class="more">+@(order.OrderItems.Count - 5)</div>
+                        }
+                    </div>
+                }
 
-                    @if (Model.Page < Model.TotalPages)
-                    {
-                        <li class="page-item">
-                            <a class="page-link" href="/orders?page=@(Model.Page + 1)">
-                                @(isBangla ? "পরবর্তী" : "Next") <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                    }
-                </ul>
-            </nav>
+                <!-- Row 4: View Details -->
+                <div class="d-flex justify-content-end mt-2">
+                    <span class="view-link">@(isBangla ? "বিস্তারিত" : "View Details") <i class="bi bi-arrow-right" style="font-size: 0.7rem;"></i></span>
+                </div>
+            </a>
         }
+    }
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="d-flex justify-content-center gap-1 mt-3">
+            <a href="@Url.Action("Index", new { page = Model.Page - 1 })"
+               class="pg-btn @(Model.Page == 1 ? "disabled" : "")">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                if (i == 1 || i == Model.TotalPages || (i >= Model.Page - 1 && i <= Model.Page + 1))
+                {
+                    <a href="@Url.Action("Index", new { page = i })"
+                       class="pg-btn @(Model.Page == i ? "active" : "")">
+                        @i
+                    </a>
+                }
+                else if (i == Model.Page - 2 || i == Model.Page + 2)
+                {
+                    <span class="pg-btn disabled border-0 bg-transparent">...</span>
+                }
+            }
+
+            <a href="@Url.Action("Index", new { page = Model.Page + 1 })"
+               class="pg-btn @(Model.Page == Model.TotalPages ? "disabled" : "")">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
     }
 </div>

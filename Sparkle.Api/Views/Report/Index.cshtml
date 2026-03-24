@@ -1,0 +1,136 @@
+@model List<Sparkle.Domain.Support.Report>
+@{
+    ViewData["Title"] = "My Reports";
+    Layout = "~/Views/Shared/_ProfileLayout.cshtml";
+}
+
+<!-- Header -->
+<div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+    <div>
+        <h5 class="tw-text-lg tw-font-bold tw-text-slate-800 tw-mb-0">My Reports</h5>
+        <p class="tw-text-xs tw-text-slate-500">Report issues with products or sellers</p>
+    </div>
+    <a href="#" class="tw-px-3 tw-py-1.5 tw-bg-orange-500 tw-text-white tw-font-semibold tw-text-xs tw-rounded-lg hover:tw-bg-orange-600 tw-transition-colors tw-flex tw-items-center tw-gap-1.5 tw-shadow-sm" data-bs-toggle="modal" data-bs-target="#newReportModal">
+        <i class="bi bi-plus-lg"></i> New Report
+    </a>
+</div>
+
+<!-- Reports List -->
+<div class="tw-bg-white tw-rounded-xl tw-border tw-border-slate-100 tw-overflow-hidden">
+    @if (Model.Any())
+    {
+        <div class="tw-divide-y tw-divide-slate-50">
+            @foreach (var report in Model)
+            {
+                var (statusClass, statusIcon) = report.Status switch
+                {
+                    "Pending" => ("tw-bg-amber-50 tw-text-amber-600", "bi-clock"),
+                    "Reviewed" => ("tw-bg-blue-50 tw-text-blue-600", "bi-eye"),
+                    "Resolved" => ("tw-bg-emerald-50 tw-text-emerald-600", "bi-check-circle"),
+                    "Rejected" => ("tw-bg-red-50 tw-text-red-600", "bi-x-circle"),
+                    _ => ("tw-bg-slate-50 tw-text-slate-600", "bi-circle")
+                };
+
+                <div class="tw-p-4 hover:tw-bg-slate-50/50 tw-transition-colors tw-group">
+                    <!-- Row 1: Type, Target, Date, Status -->
+                    <div class="tw-flex tw-items-center tw-justify-between tw-mb-2">
+                        <div class="tw-flex tw-items-center tw-gap-2">
+                            <div class="tw-w-8 tw-h-8 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0 @(report.TargetType == "Product" ? "tw-bg-blue-50 tw-text-blue-500" : "tw-bg-teal-50 tw-text-teal-500")">
+                                <i class="bi @(report.TargetType == "Product" ? "bi-box-seam" : "bi-shop")"></i>
+                            </div>
+                            <div>
+                                <span class="tw-font-semibold tw-text-slate-800 tw-text-sm">
+                                    @if (report.TargetType == "Product")
+                                    {
+                                        @(report.Product?.Title ?? "Unknown Product")
+                                    }
+                                    else
+                                    {
+                                        @(report.Seller?.ShopName ?? "Unknown Seller")
+                                    }
+                                </span>
+                                <span class="tw-text-slate-300 tw-mx-1.5">·</span>
+                                <span class="tw-text-xs tw-text-slate-400">@report.CreatedAt.ToString("MMM d, yyyy")</span>
+                            </div>
+                        </div>
+                        <span class="tw-px-2 tw-py-0.5 tw-rounded tw-text-[10px] tw-font-semibold @statusClass tw-flex tw-items-center tw-gap-1">
+                            <i class="bi @statusIcon tw-text-[9px]"></i> @report.Status
+                        </span>
+                    </div>
+                    
+                    <!-- Row 2: Reason -->
+                    <div class="tw-mb-2">
+                        <span class="tw-text-xs tw-font-semibold tw-text-slate-600 tw-bg-slate-100 tw-px-2 tw-py-0.5 tw-rounded">@report.Reason</span>
+                    </div>
+                    
+                    <!-- Row 3: Description -->
+                    <p class="tw-text-sm tw-text-slate-600 tw-mb-0 tw-line-clamp-2">@report.Description</p>
+                    
+                    @if (!string.IsNullOrEmpty(report.ResolutionNotes))
+                    {
+                        <div class="tw-mt-3 tw-bg-emerald-50 tw-p-3 tw-rounded-lg tw-text-sm tw-text-emerald-700 tw-flex tw-items-start tw-gap-2">
+                            <i class="bi bi-check-circle-fill tw-text-emerald-500 tw-mt-0.5"></i>
+                            <div>
+                                <span class="tw-font-semibold">Resolution:</span> @report.ResolutionNotes
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="tw-text-center tw-py-12 tw-px-6">
+            <div class="tw-w-16 tw-h-16 tw-mx-auto tw-mb-4 tw-bg-slate-50 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-slate-300">
+                <i class="bi bi-shield-check tw-text-2xl"></i>
+            </div>
+            <h6 class="tw-font-semibold tw-text-slate-700 tw-text-sm tw-mb-1">No Reports Yet</h6>
+            <p class="tw-text-xs tw-text-slate-500 tw-mb-4 tw-max-w-xs tw-mx-auto">If you encounter any issues with products or sellers, you can report them here.</p>
+            <a href="#" class="tw-inline-flex tw-items-center tw-gap-1.5 tw-bg-orange-500 tw-text-white tw-font-semibold tw-px-4 tw-py-2 tw-rounded-lg tw-text-xs hover:tw-bg-orange-600 tw-transition-colors" data-bs-toggle="modal" data-bs-target="#newReportModal">
+                <i class="bi bi-flag"></i> Submit a Report
+            </a>
+        </div>
+    }
+</div>
+
+<!-- New Report Modal (placeholder) -->
+<div class="modal fade" id="newReportModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content tw-rounded-2xl tw-border-0 tw-overflow-hidden">
+            <div class="modal-header tw-border-b tw-border-slate-100 tw-px-5 tw-py-4">
+                <h5 class="modal-title tw-font-bold tw-text-slate-800">Submit a Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body tw-p-5">
+                <form asp-action="Create" method="post">
+                    <div class="tw-mb-4">
+                        <label class="tw-block tw-text-sm tw-font-semibold tw-text-slate-600 tw-mb-1">Report Type</label>
+                        <select name="TargetType" class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-slate-200 tw-rounded-lg tw-text-sm focus:tw-border-orange-500 tw-outline-none">
+                            <option value="Product">Product Issue</option>
+                            <option value="Seller">Seller Issue</option>
+                        </select>
+                    </div>
+                    <div class="tw-mb-4">
+                        <label class="tw-block tw-text-sm tw-font-semibold tw-text-slate-600 tw-mb-1">Reason</label>
+                        <select name="Reason" class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-slate-200 tw-rounded-lg tw-text-sm focus:tw-border-orange-500 tw-outline-none">
+                            <option>Fake Product</option>
+                            <option>Misleading Information</option>
+                            <option>Poor Quality</option>
+                            <option>Delayed Delivery</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="tw-mb-4">
+                        <label class="tw-block tw-text-sm tw-font-semibold tw-text-slate-600 tw-mb-1">Description</label>
+                        <textarea name="Description" rows="4" class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-slate-200 tw-rounded-lg tw-text-sm focus:tw-border-orange-500 tw-outline-none tw-resize-none" placeholder="Describe the issue in detail..."></textarea>
+                    </div>
+                    <div class="tw-flex tw-justify-end tw-gap-2">
+                        <button type="button" class="tw-px-4 tw-py-2 tw-border tw-border-slate-200 tw-rounded-lg tw-text-sm tw-font-semibold tw-text-slate-600 hover:tw-bg-slate-50" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="tw-px-5 tw-py-2 tw-bg-orange-500 tw-rounded-lg tw-text-sm tw-font-semibold tw-text-white hover:tw-bg-orange-600 tw-shadow-sm">Submit Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -25,7 +25,7 @@ public class SettingsController : Controller
     {
         var model = new GeneralSettingsViewModel
         {
-            SiteName = await _settingsService.GetValueAsync("SiteName", "Sparkle"),
+            SiteName = await _settingsService.GetValueAsync("SiteTitle", "Sparkle"),
             SiteDescription = await _settingsService.GetValueAsync("SiteDescription", "Your favorite e-commerce store"),
             SupportEmail = await _settingsService.GetValueAsync("SupportEmail", "support@sparkle.local"),
             SupportPhone = await _settingsService.GetValueAsync("SupportPhone", "+880 1XXX-XXXXXX"),
@@ -41,7 +41,7 @@ public class SettingsController : Controller
     {
         if (!ModelState.IsValid) return View("General", model);
 
-        await _settingsService.SetValueAsync("SiteName", model.SiteName, "General");
+        await _settingsService.SetValueAsync("SiteTitle", model.SiteName, "General");
         await _settingsService.SetValueAsync("SiteDescription", model.SiteDescription, "General");
         await _settingsService.SetValueAsync("SupportEmail", model.SupportEmail, "General");
         await _settingsService.SetValueAsync("SupportPhone", model.SupportPhone, "General");

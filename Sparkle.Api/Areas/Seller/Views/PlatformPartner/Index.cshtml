@@ -1,0 +1,183 @@
+@{
+    ViewData["Title"] = "Platform Partners";
+}
+
+<div class="tw-mb-6">
+    <h1 class="tw-text-2xl tw-font-bold tw-text-slate-800">Platform Partners & Integrations</h1>
+    <p class="tw-text-slate-500 tw-text-sm">Connect with leading payment, shipping, and marketing services</p>
+</div>
+
+<!-- Connected Services -->
+<div class="tw-bg-white tw-border tw-border-slate-100 tw-rounded-2xl tw-shadow-sm tw-p-6 tw-mb-6">
+    <h3 class="tw-font-bold tw-text-lg tw-text-slate-800 tw-mb-4">Connected Services</h3>
+    <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-4">
+        <div class="tw-border tw-border-green-200 tw-bg-green-50 tw-rounded-xl tw-p-4">
+            <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                <div class="tw-w-12 tw-h-12 tw-bg-white tw-rounded-lg tw-flex tw-items-center tw-justify-center">
+                    <i class="bi bi-credit-card tw-text-2xl tw-text-green-600"></i>
+                </div>
+                <span class="tw-px-2 tw-py-1 tw-bg-green-600 tw-text-white tw-text-xs tw-rounded-full">Active</span>
+            </div>
+            <h4 class="tw-font-bold tw-text-slate-900">bKash Gateway</h4>
+            <p class="tw-text-sm tw-text-slate-600 tw-mt-1">Mobile payment integration</p>
+            <button class="tw-mt-3 tw-text-sm tw-text-green-600 hover:tw-text-green-700 tw-font-medium">
+                <i class="bi bi-gear tw-mr-1"></i> Manage
+            </button>
+        </div>
+
+        <div class="tw-border tw-border-green-200 tw-bg-green-50 tw-rounded-xl tw-p-4">
+            <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                <div class="tw-w-12 tw-h-12 tw-bg-white tw-rounded-lg tw-flex tw-items-center tw-justify-center">
+                    <i class="bi bi-truck tw-text-2xl tw-text-green-600"></i>
+                </div>
+                <span class="tw-px-2 tw-py-1 tw-bg-green-600 tw-text-white tw-text-xs tw-rounded-full">Active</span>
+            </div>
+            <h4 class="tw-font-bold tw-text-slate-900">Pathao Delivery</h4>
+            <p class="tw-text-sm tw-text-slate-600 tw-mt-1">Logistics & shipping</p>
+            <button class="tw-mt-3 tw-text-sm tw-text-green-600 hover:tw-text-green-700 tw-font-medium">
+                <i class="bi bi-gear tw-mr-1"></i> Manage
+            </button>
+        </div>
+
+        <div class="tw-border tw-border-slate-200 tw-bg-slate-50 tw-rounded-xl tw-p-4">
+            <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                <div class="tw-w-12 tw-h-12 tw-bg-white tw-rounded-lg tw-flex tw-items-center tw-justify-center">
+                    <i class="bi bi-envelope tw-text-2xl tw-text-slate-400"></i>
+                </div>
+                <span class="tw-px-2 tw-py-1 tw-bg-slate-600 tw-text-white tw-text-xs tw-rounded-full">Inactive</span>
+            </div>
+            <h4 class="tw-font-bold tw-text-slate-900">Email Marketing</h4>
+            <p class="tw-text-sm tw-text-slate-600 tw-mt-1">Customer engagement</p>
+            <button class="tw-mt-3 tw-text-sm tw-text-blue-600 hover:tw-text-blue-700 tw-font-medium">
+                <i class="bi bi-plus-circle tw-mr-1"></i> Connect
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Available Integrations -->
+<div class="tw-bg-white tw-border tw-border-slate-100 tw-rounded-2xl tw-shadow-sm tw-p-6 tw-mb-6">
+    <h3 class="tw-font-bold tw-text-lg tw-text-slate-800 tw-mb-4">Available Integrations</h3>
+    
+    <!-- Payment Gateways -->
+    <div class="tw-mb-6">
+        <h4 class="tw-font-medium tw-text-slate-700 tw-mb-3">Payment Gateways</h4>
+        <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-4">
+            @foreach (var service in new[] { 
+                new { name = "SSLCommerz", icon = "credit-card", desc = "Complete payment solution" },
+                new { name = "Nagad", icon = "phone", desc = "Mobile banking integration" },
+                new { name = "Rocket", icon = "currency-dollar", desc = "Dutch-Bangla payment" }
+            })
+            {
+                <div class="tw-border tw-border-slate-200 tw-rounded-xl tw-p-4 hover:tw-border-blue-300 hover:tw-shadow-md tw-transition-all">
+                    <div class="tw-flex tw-items-start tw-justify-between tw-mb-3">
+                        <div class="tw-w-10 tw-h-10 tw-bg-blue-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center">
+                            <i class="bi bi-@service.icon tw-text-blue-600"></i>
+                        </div>
+                        <button class="tw-px-3 tw-py-1.5 tw-bg-blue-600 tw-text-white tw-text-sm tw-rounded-lg hover:tw-bg-blue-700 tw-transition-colors">
+                            Connect
+                        </button>
+                    </div>
+                    <h5 class="tw-font-bold tw-text-slate-900">@service.name</h5>
+                    <p class="tw-text-sm tw-text-slate-600 tw-mt-1">@service.desc</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Shipping Partners -->
+    <div class="tw-mb-6">
+        <h4 class="tw-font-medium tw-text-slate-700 tw-mb-3">Shipping & Logistics</h4>
+        <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-4">
+            @foreach (var service in new[] { 
+                new { name = "Redx Courier", icon = "box-seam", desc = "Express delivery service" },
+                new { name = "Steadfast", icon = "truck", desc = "B2C parcel delivery" },
+                new { name = "eCourier", icon = "bicycle", desc = "Fast pickup & delivery" }
+            })
+            {
+                <div class="tw-border tw-border-slate-200 tw-rounded-xl tw-p-4 hover:tw-border-green-300 hover:tw-shadow-md tw-transition-all">
+                    <div class="tw-flex tw-items-start tw-justify-between tw-mb-3">
+                        <div class="tw-w-10 tw-h-10 tw-bg-green-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center">
+                            <i class="bi bi-@service.icon tw-text-green-600"></i>
+                        </div>
+                        <button class="tw-px-3 tw-py-1.5 tw-bg-green-600 tw-text-white tw-text-sm tw-rounded-lg hover:tw-bg-green-700 tw-transition-colors">
+                            Connect
+                        </button>
+                    </div>
+                    <h5 class="tw-font-bold tw-text-slate-900">@service.name</h5>
+                    <p class="tw-text-sm tw-text-slate-600 tw-mt-1">@service.desc</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Marketing Tools -->
+    <div>
+        <h4 class="tw-font-medium tw-text-slate-700 tw-mb-3">Marketing & Analytics</h4>
+        <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-4">
+            @foreach (var service in new[] { 
+                new { name = "Facebook Pixel", icon = "facebook", desc = "Track conversions" },
+                new { name = "Google Analytics", icon = "graph-up", desc = "Website analytics" },
+                new { name = "Mailchimp", icon = "envelope-fill", desc = "Email campaigns" }
+            })
+            {
+                <div class="tw-border tw-border-slate-200 tw-rounded-xl tw-p-4 hover:tw-border-purple-300 hover:tw-shadow-md tw-transition-all">
+                    <div class="tw-flex tw-items-start tw-justify-between tw-mb-3">
+                        <div class="tw-w-10 tw-h-10 tw-bg-purple-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center">
+                            <i class="bi bi-@service.icon tw-text-purple-600"></i>
+                        </div>
+                        <button class="tw-px-3 tw-py-1.5 tw-bg-purple-600 tw-text-white tw-text-sm tw-rounded-lg hover:tw-bg-purple-700 tw-transition-colors">
+                            Connect
+                        </button>
+                    </div>
+                    <h5 class="tw-font-bold tw-text-slate-900">@service.name</h5>
+                    <p class="tw-text-sm tw-text-slate-600 tw-mt-1">@service.desc</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- API Keys Management -->
+<div class="tw-bg-white tw-border tw-border-slate-100 tw-rounded-2xl tw-shadow-sm tw-p-6">
+    <h3 class="tw-font-bold tw-text-lg tw-text-slate-800 tw-mb-4">API Keys & Credentials</h3>
+    <div class="tw-space-y-4">
+        <div class="tw-border tw-border-slate-200 tw-rounded-lg tw-p-4">
+            <div class="tw-flex tw-items-center tw-justify-between tw-mb-2">
+                <h5 class="tw-font-medium tw-text-slate-900">bKash Merchant API</h5>
+                <button class="tw-text-sm tw-text-blue-600 hover:tw-text-blue-700">
+                    <i class="bi bi-pencil tw-mr-1"></i> Edit
+                </button>
+            </div>
+            <div class="tw-flex tw-items-center tw-gap-2">
+                <code class="tw-flex-1 tw-px-3 tw-py-2 tw-bg-slate-50 tw-border tw-border-slate-200 tw-rounded tw-text-sm tw-font-mono">
+                    ••••••••••••••••••••••••
+                </code>
+                <button class="tw-px-3 tw-py-2 tw-border tw-border-slate-200 tw-rounded hover:tw-bg-slate-50 tw-transition-colors">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="tw-border tw-border-slate-200 tw-rounded-lg tw-p-4">
+            <div class="tw-flex tw-items-center tw-justify-between tw-mb-2">
+                <h5 class="tw-font-medium tw-text-slate-900">Pathao API Token</h5>
+                <button class="tw-text-sm tw-text-blue-600 hover:tw-text-blue-700">
+                    <i class="bi bi-pencil tw-mr-1"></i> Edit
+                </button>
+            </div>
+            <div class="tw-flex tw-items-center tw-gap-2">
+                <code class="tw-flex-1 tw-px-3 tw-py-2 tw-bg-slate-50 tw-border tw-border-slate-200 tw-rounded tw-text-sm tw-font-mono">
+                    ••••••••••••••••••••••••
+                </code>
+                <button class="tw-px-3 tw-py-2 tw-border tw-border-slate-200 tw-rounded hover:tw-bg-slate-50 tw-transition-colors">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+        </div>
+
+        <button class="tw-w-full tw-px-4 tw-py-2 tw-border-2 tw-border-dashed tw-border-slate-300 tw-rounded-lg tw-text-sm tw-text-slate-600 hover:tw-border-blue-500 hover:tw-text-blue-600 tw-transition-colors">
+            <i class="bi bi-plus-circle tw-mr-2"></i> Add New API Key
+        </button>
+    </div>
+</div>

@@ -1,0 +1,72 @@
+@model Sparkle.Api.Models.ReportViewModel
+@{
+    ViewData["Title"] = "Report " + Model.TargetType;
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4 p-md-5">
+                    <h2 class="h4 mb-4 text-danger fw-bold">
+                        <i class="bi bi-flag-fill me-2"></i> Report @Model.TargetType
+                    </h2>
+                    
+                    <div class="alert alert-light border mb-4">
+                        <div class="d-flex align-items-center">
+                            @if(Model.TargetType == "Product")
+                            {
+                                <i class="bi bi-box-seam fs-3 me-3 text-secondary"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-shop fs-3 me-3 text-secondary"></i>
+                            }
+                            <div>
+                                <small class="text-muted d-block uppercase fw-bold" style="font-size: 0.75rem;">REPORTING</small>
+                                <strong class="text-dark">@ViewBag.TargetName</strong>
+                                @if (ViewBag.SellerName != null)
+                                {
+                                    <span class="text-muted small">by @ViewBag.SellerName</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <form asp-action="Create" method="post">
+                        <input type="hidden" asp-for="TargetType" />
+                        <input type="hidden" asp-for="TargetId" />
+
+                        <div class="mb-4">
+                            <label asp-for="Reason" class="form-label fw-bold">Reason for reporting</label>
+                            <select asp-for="Reason" class="form-select form-select-lg">
+                                <option value="">Select a reason...</option>
+                                <option value="Inappropriate Content">Inappropriate Content</option>
+                                <option value="Counterfeit Product">Counterfeit Product</option>
+                                <option value="Misleading Information">Misleading Information</option>
+                                <option value="Scam/Fraud">Scam/Fraud</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <span asp-validation-for="Reason" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Description" class="form-label fw-bold">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="5" placeholder="Please describe the issue in detail..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg rounded-pill">Submit Report</button>
+                            <a href="javascript:history.back()" class="btn btn-light btn-lg rounded-pill text-muted">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

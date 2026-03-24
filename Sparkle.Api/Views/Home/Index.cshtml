@@ -3,10 +3,10 @@
 @using System.Linq
 @model HomepageViewModel
 @{
-    ViewData["Title"] = "Sparkle - Bangladesh's Largest Online Shopping Mall";
-
     var langCookie = Context.Request.Cookies["sparkle-lang"] == "bn" ? "bn" : "en";
     var isBangla = langCookie == "bn";
+    var isGuestMode = Context.Request.Cookies["GuestMode"] == "true";
+    ViewData["Title"] = isBangla ? "বাংলাদেশের বৃহত্তম অনলাইন শপিং মল" : "Bangladesh's Largest Online Shopping Mall";
 
     var categoryIconMap = new Dictionary<string, (string Icon, string ColorClass)>(StringComparer.OrdinalIgnoreCase)
     {
@@ -45,7 +45,7 @@
         ["beauty-personal-care"] = ("Beauty & Personal Care", "বিউটি ও পার্সোনাল কেয়ার"),
         ["home-living"] = ("Home & Living", "হোম ও লিভিং"),
         ["home-appliances"] = ("Home Appliances", "হোম অ্যাপ্লায়েন্স"),
-        ["kitchen-small-appliances"] = ("Kitchen & Small Appliances", "কিচেন ও স্মল অ্যাপ্লায়েন্স"),
+        ["kitchen-small-appliances"] = ("Kitchen Appliances", "কিচেন অ্যাপ্লায়েন্স"),
         ["groceries-essentials"] = ("Groceries & Essentials", "গ্রোসারি ও নিত্যপ্রয়োজনীয়"),
         ["baby-kids-mom"] = ("Baby, Kids & Mom", "বেবি, কিডস ও মম"),
         ["toys-games"] = ("Toys & Games", "টয়স ও গেমস"),
@@ -97,8 +97,12 @@
         .ToDictionary(x => x.slug, x => x.index, StringComparer.OrdinalIgnoreCase);
 
     var featuredCategories = Model.Categories
-        .Where(c => !string.IsNullOrEmpty(c.Slug) && orderLookup.ContainsKey(c.Slug))
-        .OrderBy(c => orderLookup[c.Slug!])
+        .OrderBy(c => {
+             return !string.IsNullOrEmpty(c.Slug) && orderLookup.ContainsKey(c.Slug) 
+                ? orderLookup[c.Slug] 
+                : 999;
+        })
+        .ThenBy(c => c.Name)
         .ToList();
 }
 
@@ -199,20 +203,22 @@
 
 <!-- Quick Category Access Grid -->
 <div class="container my-5" data-aos="fade-up" data-aos-duration="400">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="sparkle-section-title mb-1">
-                <i class="bi bi-grid-3x3-gap-fill text-warning"></i>
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" style="border-color: #e0e0e0 !important;">
+        <div class="d-flex align-items-center gap-3">
+            <h2 class="flash-sale-title mb-0" style="font-size: 1.25rem; font-weight: 500 !important; color: #212121;">
                 @(isBangla ? "ক্যাটাগরি থেকে কিনুন" : "Shop by Category")
             </h2>
-            <p class="sparkle-section-subtitle mb-0">
-                @(isBangla ? "দ্রুত খুঁজে নিন আপনার প্রয়োজনীয় প্রোডাক্ট" : "Jump into the department you need in one click")
-            </p>
         </div>
+        @if (featuredCategories.Count > 12)
+        {
+            <a href="javascript:void(0)" id="seeMoreBtn" class="see-more-pill text-decoration-none" onclick="toggleCategoryDisplay(event)">
+                <span id="seeMoreText">@(isBangla ? "আরও দেখুন" : "See More")</span> <i class="bi bi-chevron-down" id="seeMoreIcon"></i>
+            </a>
+        }
     </div>
 
     <div class="row g-3 g-lg-4" id="categoryGrid">
-        @for (int i = 0; i < featuredCategories.Count && i < 24; i++)
+        @for (int i = 0; i < featuredCategories.Count; i++)
         {
             var category = featuredCategories[i];
             var slugKey = category.Slug ?? string.Empty;
@@ -224,9 +230,9 @@
                 ? (isBangla ? titleInfo.Bn : titleInfo.En)
                 : category.Name;
 
-            var isHidden = i >= 12 ? "category-card-hidden" : "";
+            var displayStyle = i >= 12 ? "display: none;" : "";
 
-            <div class="col-6 col-sm-4 col-md-3 col-lg-2 category-card-item @isHidden" data-index="@i">
+            <div class="col-6 col-sm-4 col-md-3 col-lg-2 category-card-item" data-index="@i" style="@displayStyle">
                 <a href="/category/@category.Slug" class="category-card text-decoration-none d-block">
                     <div class="card border-0 shadow-sm h-100 text-center p-3 hover-lift">
                         <div class="category-icon mb-2 mx-auto">
@@ -240,263 +246,182 @@
     </div>
     
     
-    @if (featuredCategories.Count > 12)
+
+</div>
+
+
+@foreach (var item in Model.Sections)
+{
+    @if (item.SectionType == "FlashSale")
     {
-        <div class="text-center mt-5">
-            <button id="seeMoreBtn" class="btn btn-primary px-5 py-3 rounded-pill shadow-sm see-more-button" onclick="toggleCategories()">
-                <span id="seeMoreText" class="fw-semibold">@(isBangla ? "আরও ক্যাটাগরি দেখুন" : "See More Categories")</span>
-                <i class="bi bi-chevron-down ms-2 fs-5" id="seeMoreIcon"></i>
-            </button>
+        <section class="flash-sale-section py-4" id="flash-deals-@item.Id" style="@(item.BackgroundColor != null ? $"background-color: {item.BackgroundColor};" : "background-color: white;")">
+            @if (!string.IsNullOrEmpty(item.BannerImageUrl))
+            {
+                <div style="background-image: url('@item.BannerImageUrl'); background-size: cover; background-position: center; position: absolute; inset: 0; opacity: 0.1; pointer-events: none;"></div>
+            }
+            <div class="container" style="position: relative; z-index: 2;">
+                <!-- Section Header -->
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" style="border-color: rgba(0,0,0,0.1) !important;">
+                    <div class="d-flex align-items-center gap-3">
+                        <h2 class="flash-sale-title mb-0" style="font-size: 1.25rem; font-weight: 500 !important; color: #212121;">@(item.DisplayTitle ?? (isBangla ? "ফ্ল্যাশ সেল" : "Flash Sale"))</h2>
+                        <span class="on-sale-badge" style="background-color: #f57224; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">@(isBangla ? "চলছে এখন" : "On Sale Now")</span>
+                    </div>
+                    <a href="/search" class="shop-all-btn" style="position: relative; z-index: 100; border: 1px solid #f57224; color: #f57224; background: transparent; padding: 8px 20px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s; cursor: pointer;">@(isBangla ? "সব দেখুন" : "ALL PRODUCT")</a>
+                </div>
+                
+                <!-- Products Grid -->
+                <div>
+                    <div class="horizontal-scroll-container" id="flashDealsContainer" style="scroll-behavior: smooth; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+                        <div class="d-flex gap-4 pb-3" style="min-width: min-content;">
+                        @foreach (var product in Model.FlashDeals.Take(item.MaxProductsToDisplay > 0 ? item.MaxProductsToDisplay : 24))
+                        {
+                            var firstImage = product.Images.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300";
+                            var rnd = new Random(product.Id);
+                            var ratingVal = (3.5 + (rnd.NextDouble() * 1.5));
+                            var reviewCount = rnd.Next(10, 500);
+                            var stockVal = rnd.Next(5, 50);
+                            var isFree = rnd.Next(0, 2) == 0;
+                            
+                            <div class="flash-product-card" style="flex: 0 0 185px; max-width: 185px;">
+                                <partial name="_ProductCard" model="@(new {
+                                    Id = product.Id,
+                                    Title = product.Title,
+                                    ImageUrl = firstImage,
+                                    Price = product.Price,
+                                    BasePrice = product.BasePrice,
+                                    DiscountPercent = product.DiscountPercent ?? 0,
+                                    Stock = stockVal,
+                                    Rating = ratingVal,
+                                    Reviews = reviewCount,
+                                    IsFreeShipping = isFree,
+                                    ConfidenceScore = 0
+                                })" />
+                            </div>
+                        }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+    else if (item.SectionType == "TrendingProducts")
+    {
+        <!-- Trending Now Section -->
+        <section class="trending-section py-4" style="@(item.BackgroundColor != null ? $"background-color: {item.BackgroundColor};" : "background-color: #fafafa;")">
+            <div class="container">
+                <!-- Section Header - Minimal -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="mb-0" style="font-size: 1.15rem; font-weight: 600; color: #333;">
+                            @(item.DisplayTitle ?? (isBangla ? "ট্রেন্ডিং পণ্য" : "Trending Now"))
+                        </h2>
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-0 rounded" 
+                              style="background: #10b981; font-size: 0.55rem; font-weight: 600; color: white;">
+                            <span class="spinner-grow spinner-grow-sm" style="width: 5px; height: 5px;" role="status"></span>
+                            LIVE
+                        </span>
+                    </div>
+                    
+                    <a href="/search" class="d-inline-flex align-items-center gap-1 text-decoration-none px-3 py-1" 
+                       style="background: #f57224; color: white; font-size: 0.75rem; font-weight: 500; border-radius: 4px;">
+                        @(isBangla ? "সব দেখুন" : "See All")
+                        <i class="bi bi-arrow-right" style="font-size: 0.7rem;"></i>
+                    </a>
+                </div>
+                
+                <!-- Products Grid -->
+                <div class="position-relative">
+                    <!-- Scrollable Container -->
+                    <div class="trending-scroll-container" id="trendingContainer-@item.Id">
+                        <div class="d-flex gap-3 pb-2">
+                            @for (int i = 0; i < Model.TrendingProducts.Take(item.MaxProductsToDisplay > 0 ? item.MaxProductsToDisplay : 12).Count(); i++)
+                            {
+                                var product = Model.TrendingProducts[i];
+                                var firstImage = product.Images.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300";
+                                var stock = product.Variants.Sum(v => v.Stock);
+                                
+                                <div class="trending-product-card" data-product-id="@product.Id">
+                                    <partial name="_ProductCard" model="@(new {
+                                        Id = product.Id,
+                                        Title = product.Title,
+                                        ImageUrl = firstImage,
+                                        Price = product.Price,
+                                        BasePrice = product.BasePrice,
+                                        DiscountPercent = product.DiscountPercent ?? 0,
+                                        Stock = stock,
+                                        Rating = product.AverageRating,
+                                        Reviews = product.TotalReviews,
+                                        IsFreeShipping = false,
+                                        ConfidenceScore = 0
+                                    })" />
+                                </div>
+                            }
+                            
+                            @if (Model.TrendingProducts.Count() > 12)
+                            {
+                                <div class="trending-view-all-card">
+                                    <a href="/search" class="text-decoration-none d-flex flex-column align-items-center justify-content-center h-100">
+                                        <div class="view-all-icon">
+                                            <i class="bi bi-arrow-right"></i>
+                                        </div>
+                                        <span class="view-all-text">@(isBangla ? "সব দেখুন" : "View All")</span>
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+    else if (item.SectionType == "RecommendedProducts")
+    {
+        <!-- Featured Products Grid -->
+        <div class="container my-5" data-aos="fade-up">
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom" style="border-color: #e0e0e0 !important;">
+                <div class="d-flex align-items-center gap-3">
+                    <h2 class="flash-sale-title mb-0" style="font-size: 1.25rem; font-weight: 500 !important; color: #212121;">@(item.DisplayTitle ?? (isBangla ? "আপনার জন্য সাজানো পণ্য" : "Recommended For You"))</h2>
+                </div>
+            </div>
+            
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 g-lg-4" id="featuredProductsGrid-@item.Id">
+                @for (int i = 0; i < Model.FeaturedProducts.Take(item.MaxProductsToDisplay > 0 ? item.MaxProductsToDisplay : 24).Count(); i++)
+                {
+                    var product = Model.FeaturedProducts.ElementAt(i);
+                    var firstImage = product.Images.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300";
+                    var stock = product.Variants.Sum(v => v.Stock);
+                    var isHidden = i >= 15 ? "product-card-hidden" : "";
+                    
+                    <div class="col product-card-item @isHidden" data-index="@i">
+                        <partial name="_ProductCard" model="@(new {
+                            Id = product.Id,
+                            Title = product.Title,
+                            ImageUrl = firstImage,
+                            Price = product.Price,
+                            BasePrice = product.BasePrice,
+                            DiscountPercent = product.DiscountPercent ?? 0,
+                            Stock = stock,
+                            Rating = product.AverageRating,
+                            Reviews = product.TotalReviews,
+                            IsFreeShipping = false,
+                            ConfidenceScore = 0
+                        })" />
+                    </div>
+                }
+            </div>
+            
+            @if (Model.FeaturedProducts.Count() > 15)
+            {
+                <div class="text-center mt-4 mb-4">
+                    <button class="btn btn-primary px-4 py-2 rounded-pill shadow-sm see-more-button" onclick="toggleFeaturedProducts(this)">
+                        <span class="fw-semibold">@(isBangla ? "আরও প্রোডাক্ট দেখুন" : "See More Products")</span>
+                        <i class="bi bi-chevron-down ms-2 fs-5"></i>
+                    </button>
+                </div>
+            }
         </div>
     }
-</div>
-
-<!-- Today's Flash Deals Section -->
-<section class="flash-deals-section" id="flash-deals" data-aos="fade-up" data-aos-duration="400">
-    <div class="container py-4">
-        <!-- Section Header -->
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-end mb-3 gap-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="flash-icon-badge">
-                    <i class="bi bi-lightning-charge-fill"></i>
-                </div>
-                <div>
-                    <h2 class="section-title mb-0">@(isBangla ? "আজকের ফ্ল্যাশ ডিল" : "Today's Flash Deals") ⚡</h2>
-                    <p class="section-subtitle mb-0 text-muted small">@(isBangla ? "সীমিত সময়ের অফার" : "Limited time offers")</p>
-                </div>
-            </div>
-            
-            <!-- Countdown Timer -->
-            <div class="flash-countdown-box ms-auto">
-                <div class="countdown-inner d-flex align-items-center gap-2">
-                    <span class="countdown-text text-uppercase fw-bold small text-danger">@(isBangla ? "শেষ হবে" : "Ends in"):</span>
-                    <div class="countdown-units d-flex gap-1">
-                        <span class="time-box fw-bold bg-danger text-white rounded px-2 py-1" id="hours">06</span>
-                        <span class="text-danger fw-bold">:</span>
-                        <span class="time-box fw-bold bg-danger text-white rounded px-2 py-1" id="minutes">45</span>
-                        <span class="text-danger fw-bold">:</span>
-                        <span class="time-box fw-bold bg-danger text-white rounded px-2 py-1" id="seconds">32</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Products Horizontal Scroll -->
-        <div class="position-relative">
-            <button class="scroll-btn scroll-btn-prev" id="flashPrevBtn" onclick="scrollFlashDeals('left')">
-                <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="scroll-btn scroll-btn-next" id="flashNextBtn" onclick="scrollFlashDeals('right')">
-                <i class="bi bi-chevron-right"></i>
-            </button>
-            <div class="horizontal-scroll-container" id="flashDealsContainer">
-                <div class="d-flex gap-3 pb-3" style="min-width: min-content;">
-                @foreach (var product in Model.FlashDeals.Take(12))
-                {
-                    var firstImage = product.Images.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300";
-                    var firstVariant = product.Variants.FirstOrDefault();
-                    var discountedPrice = product.BasePrice * (1 - product.DiscountPercent / 100);
-                    var stockLevel = firstVariant?.Stock ?? 0;
-                    
-                    <div class="scroll-card-wrapper">
-                        <div class="flash-card product-card h-100" data-product-id="@product.Id" data-variant-id="@firstVariant?.Id">
-                            <a href="/home/product/@product.Id" class="card-link h-100 d-flex flex-column">
-                                <div class="flash-card-inner flex-grow-1 d-flex flex-column">
-                                    <!-- Product Image -->
-                                    <div class="flash-img-container position-relative rounded-top overflow-hidden">
-                                        <img src="@firstImage" alt="@product.Title" class="flash-img w-100 h-100 object-fit-cover" loading="lazy">
-                                        <span class="discount-tag position-absolute top-0 start-0 m-2 badge bg-danger">
-                                            <i class="bi bi-lightning-fill"></i> @product.DiscountPercent%
-                                        </span>
-                                    </div>
-                                    
-                                    <!-- Product Info -->
-                                    <div class="flash-card-body p-3 d-flex flex-column flex-grow-1">
-                                        <h6 class="flash-title text-truncate mb-2" title="@product.Title">@product.Title</h6>
-                                        <div class="flash-prices mb-2">
-                                            <span class="current-price fw-bold text-danger">৳ @((int)(discountedPrice ?? 0))</span>
-                                            <small class="old-price text-muted text-decoration-line-through ms-1">৳ @((int)product.BasePrice)</small>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-danger mt-auto w-100 rounded-pill" onclick="addToCart(@product.Id, event)">
-                                            <i class="bi bi-cart-plus"></i> @(isBangla ? "কার্টে যোগ করুন" : "Add to Cart")
-                                        </button>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                }
-                
-                @if (Model.FlashDeals.Count() > 12)
-                {
-                    <div class="scroll-card-wrapper d-flex align-items-center justify-content-center">
-                        <a href="/search?category=flash-deals" class="btn btn-light rounded-circle shadow-sm p-4 d-flex flex-column align-items-center justify-content-center text-decoration-none text-danger" style="width: 120px; height: 120px;">
-                            <i class="bi bi-arrow-right fs-2 mb-1"></i>
-                            <span class="small fw-bold">@(isBangla ? "সব দেখুন" : "View All")</span>
-                        </a>
-                    </div>
-                }
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Trending in Your Area (Real-time) -->
-<div class="trending-section bg-light" data-aos="fade-up" data-aos-duration="400">
-    <div class="container py-4">
-        <!-- Section Header -->
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-end mb-3 gap-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="trending-icon-badge">
-                    <i class="bi bi-graph-up-arrow"></i>
-                </div>
-                <div>
-                    <h2 class="section-title mb-0">@(isBangla ? "ট্রেন্ডিং পণ্য" : "Trending Now")</h2>
-                    <p class="section-subtitle mb-0 text-muted small"><span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2 py-0 d-inline-flex align-items-center gap-1"><span class="spinner-grow spinner-grow-sm" style="width: 0.5rem; height: 0.5rem;" role="status"></span>LIVE</span> @(isBangla ? "ঢাকা আপডেট" : "Dhaka update")</p>
-                </div>
-            </div>
-            
-            <a href="/search" class="btn btn-link text-decoration-none small fw-bold">
-                @(isBangla ? "সব দেখুন" : "See All") <i class="bi bi-arrow-right"></i>
-            </a>
-        </div>
-        
-        <!-- Products Horizontal Scroll -->
-        <div class="position-relative">
-            <button class="scroll-btn scroll-btn-prev" id="trendingPrevBtn" onclick="scrollTrending('left')">
-                <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="scroll-btn scroll-btn-next" id="trendingNextBtn" onclick="scrollTrending('right')">
-                <i class="bi bi-chevron-right"></i>
-            </button>
-            <div class="horizontal-scroll-container" id="trendingContainer">
-                <div class="d-flex gap-3 pb-3" style="min-width: min-content;">
-                @for (int i = 0; i < Model.TrendingProducts.Take(12).Count(); i++)
-                {
-                    var product = Model.TrendingProducts[i];
-                    var firstImage = product.Images.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300";
-                    var firstVariant = product.Variants.FirstOrDefault();
-                    var discountedPrice = product.BasePrice * (1 - product.DiscountPercent / 100);
-                    
-                    <div class="scroll-card-wrapper">
-                        <div class="flash-card product-card h-100" data-product-id="@product.Id" data-variant-id="@firstVariant?.Id">
-                            <a href="/home/product/@product.Id" class="card-link h-100 d-flex flex-column">
-                                <div class="flash-card-inner flex-grow-1 d-flex flex-column">
-                                    <!-- Product Image -->
-                                    <div class="flash-img-container position-relative rounded-top overflow-hidden">
-                                        <img src="@firstImage" alt="@product.Title" class="flash-img w-100 h-100 object-fit-cover" loading="lazy">
-                                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75 rounded-pill">#@(i + 1)</span>
-                                    </div>
-                                    
-                                    <!-- Product Info -->
-                                    <div class="flash-card-body p-3 d-flex flex-column flex-grow-1">
-                                        <h6 class="flash-title text-truncate mb-2" title="@product.Title">@product.Title</h6>
-                                        <div class="flash-prices mb-2">
-                                            <span class="current-price fw-bold text-primary">৳ @((int)(discountedPrice ?? 0))</span>
-                                            @if (product.DiscountPercent > 0)
-                                            {
-                                                <small class="old-price text-muted text-decoration-line-through ms-1">৳ @((int)product.BasePrice)</small>
-                                            }
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-primary mt-auto w-100 rounded-pill" onclick="addToCart(@product.Id, event)">
-                                            <i class="bi bi-cart-plus"></i> @(isBangla ? "কার্টে যোগ করুন" : "Add to Cart")
-                                        </button>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                }
-                
-                @if (Model.TrendingProducts.Count() > 12)
-                {
-                    <div class="scroll-card-wrapper d-flex align-items-center justify-content-center">
-                        <a href="/search" class="btn btn-light rounded-circle shadow-sm p-4 d-flex flex-column align-items-center justify-content-center text-decoration-none text-primary" style="width: 120px; height: 120px;">
-                            <i class="bi bi-arrow-right fs-2 mb-1"></i>
-                            <span class="small fw-bold">@(isBangla ? "সব দেখুন" : "View All")</span>
-                        </a>
-                    </div>
-                }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Featured Products Grid -->
-<div class="container my-5" data-aos="fade-up">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="sparkle-section-title mb-1">@(isBangla ? "আপনার জন্য সাজানো পণ্য" : "Recommended For You")</h2>
-            <p class="sparkle-section-subtitle mb-0">@(isBangla ? "আপনার ব্রাউজিং পছন্দ অনুযায়ী" : "Based on your browsing history")</p>
-        </div>
-    </div>
-    
-    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3 g-lg-4" id="featuredProductsGrid">
-        @for (int i = 0; i < Model.FeaturedProducts.Count(); i++)
-        {
-            var product = Model.FeaturedProducts.ElementAt(i);
-            var firstImage = product.Images.FirstOrDefault()?.Url ?? "https://via.placeholder.com/300x300";
-            var firstVariant = product.Variants.FirstOrDefault();
-            var discountedPrice = product.BasePrice * (1 - product.DiscountPercent / 100);
-            var isHidden = i >= 15 ? "product-card-hidden" : "";
-            
-            <div class="col product-card-item @isHidden" data-index="@i">
-                <div class="product-card h-100" data-product-id="@product.Id" data-variant-id="@firstVariant?.Id">
-                    <div class="card border-0 shadow-sm h-100 overflow-hidden featured-product-card">
-                        <a href="/home/product/@product.Id" class="text-decoration-none">
-                            <div class="position-relative product-image-wrapper bg-light">
-                                <img src="@firstImage" class="card-img-top w-100 h-100 object-fit-cover" alt="@product.Title" loading="lazy" decoding="async">
-                                @if (product.DiscountPercent > 0)
-                                {
-                                    <span class="badge bg-danger position-absolute top-0 start-0 m-2 shadow-sm">
-                                        -@product.DiscountPercent%
-                                    </span>
-                                }
-                                @if (product.IsAdminProduct)
-                                {
-                                    <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2 shadow-sm">
-                                        <i class="bi bi-star-fill"></i> Sparkle
-                                    </span>
-                                }
-                            </div>
-                        </a>
-                        <div class="card-body d-flex flex-column p-3">
-                            <a href="/home/product/@product.Id" class="text-decoration-none">
-                                <h6 class="product-title mb-2">@product.Title</h6>
-                                <p class="product-description text-muted small mb-2">@product.ShortDescription</p>
-                            </a>
-                            <div class="product-price-section mb-3">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="current-price fw-bold text-danger">৳@((int)(discountedPrice ?? 0))</span>
-                                    @if (product.DiscountPercent > 0)
-                                    {
-                                        <span class="original-price text-muted text-decoration-line-through small">৳@((int)product.BasePrice)</span>
-                                    }
-                                </div>
-                            </div>
-                            <button class="btn btn-danger w-100 add-to-cart-btn" onclick="addToCart(@product.Id, event)">
-                                <i class="bi bi-cart-plus me-1"></i> @(isBangla ? "কার্টে যোগ করুন" : "Add to Cart")
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
-    
-    
-    @if (Model.FeaturedProducts.Count() > 15)
-    {
-        <div class="text-center mt-5 mb-4">
-            <button id="featuredSeeMoreBtn" class="btn btn-primary px-5 py-3 rounded-pill shadow-sm see-more-button" onclick="toggleFeaturedProducts()">
-                <span id="featuredSeeMoreText" class="fw-semibold">@(isBangla ? "আরও প্রোডাক্ট দেখুন" : "See More Products")</span>
-                <i class="bi bi-chevron-down ms-2 fs-5" id="featuredSeeMoreIcon"></i>
-            </button>
-        </div>
-    }
-</div>
+}
 
 <!-- Trust Badges -->
 <div class="container my-5 pb-4" data-aos="fade-up" data-aos-duration="400">
@@ -542,6 +467,335 @@
         padding: 1.5rem 0;
         margin-bottom: 2rem;
     }
+
+    /* Minimal See More Pill */
+    .see-more-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 20px;
+        border-radius: 50px;
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        color: #424242;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        box-shadow: none;
+        letter-spacing: 0.3px;
+    }
+    
+    .see-more-pill:hover {
+        border-color: #f57224;
+        color: #f57224;
+        box-shadow: none;
+        transform: translateY(-2px);
+        background: #fff;
+    }
+
+    .see-more-pill i {
+        transition: transform 0.3s ease;
+        font-size: 0.8rem;
+    }
+    
+    .see-more-pill:hover i {
+        transform: translateY(2px);
+    }
+    
+    .see-more-pill.expanded i {
+        transform: rotate(180deg);
+    }
+    
+    .see-more-pill.expanded:hover i {
+        transform: rotate(180deg) translateY(-2px);
+    }
+    
+    .category-card-hidden {
+        display: none !important;
+    }
+    
+    /* ========================================
+       TRENDING SECTION - Modern Clean Design
+       ======================================== */
+    
+    .trending-section {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Navigation Buttons */
+    .trending-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid #e5e5e5;
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.2s ease;
+        color: #666;
+        font-size: 0.85rem;
+    }
+    
+    .trending-nav-btn:hover {
+        background: #f57224;
+        color: white;
+        border-color: #f57224;
+        box-shadow: none;
+    }
+    
+    .trending-nav-prev { left: 0; }
+    .trending-nav-next { right: 0; }
+    
+    /* Scroll Container */
+    .trending-scroll-container {
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 10px 5px;
+    }
+    
+    .trending-scroll-container::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Product Card - Clean Modern Style */
+    /* Product Card - Clean Minimal Design */
+    .trending-product-card,
+    .flash-product-card,
+    .product-card-item .unified-product-card {
+        background: white;
+        border: 1px solid #e5e5e5; /* Thin outline border */
+        border-radius: 6px; /* Reduced from 12px */
+        overflow: hidden;
+        transition: all 0.2s ease;
+        box-shadow: none; /* Removed heavy shadow */
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Layout specific for Trending */
+    .trending-product-card {
+        flex: 0 0 165px;
+        width: 165px;
+    }
+    
+    .trending-product-card:hover,
+    .flash-product-card:hover,
+    .product-card-item .unified-product-card:hover {
+        border-color: #f57224;
+        box-shadow: none;
+        transform: none;
+    }
+    
+    /* Product Image */
+    .trending-product-image {
+        position: relative;
+        width: 100%;
+        height: 130px;
+        overflow: hidden;
+        background: #f5f5f5;
+    }
+    
+    .trending-product-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+    
+    .trending-product-card:hover .trending-product-image img {
+        transform: scale(1.08);
+    }
+    
+    /* Rank Badge */
+    .trending-product-rank {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-weight: 600;
+        font-size: 0.65rem;
+        min-width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        z-index: 2;
+    }
+    
+    /* Discount Badge */
+    .trending-product-discount {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #ef4444;
+        color: white;
+        font-weight: 600;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    
+    /* Product Details */
+    .trending-product-details {
+        padding: 6px 8px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .trending-product-title {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 6px;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        height: 2.2em;
+    }
+    
+    .trending-product-price {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #f57224;
+    }
+    
+    .trending-product-old-price {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        text-decoration: line-through;
+        margin-left: 6px;
+    }
+    
+    /* Add to Cart Button */
+    .trending-product-actions {
+        padding: 0 12px 12px;
+    }
+    
+    .trending-add-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 8px 10px;
+        background: #f57224;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .trending-add-btn:hover {
+        background: #e65c00;
+    }
+    
+    .trending-add-btn i {
+        font-size: 0.85rem;
+    }
+    
+    /* View All Card */
+    .trending-view-all-card {
+        flex: 0 0 120px;
+        width: 120px;
+        min-height: 200px;
+        background: #f5f5f5;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .trending-view-all-card:hover {
+        background: #ebebeb;
+    }
+    
+    .view-all-icon {
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.2s ease;
+    }
+    
+    .trending-view-all-card:hover .view-all-icon {
+        background: #f57224;
+    }
+    
+    .view-all-icon i {
+        font-size: 1rem;
+        color: #f57224;
+        transition: color 0.2s ease;
+    }
+    
+    .trending-view-all-card:hover .view-all-icon i {
+        color: white;
+    }
+    
+    .view-all-text {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #333;
+    }
+    
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .trending-nav-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 0.9rem;
+        }
+        
+        .trending-nav-prev { left: 5px; }
+        .trending-nav-next { right: 5px; }
+        
+        .trending-product-card {
+            flex: 0 0 170px;
+            width: 170px;
+        }
+        
+        .trending-product-image {
+            height: 140px;
+        }
+        
+        .trending-product-details {
+            padding: 12px;
+        }
+        
+        .trending-product-title {
+            font-size: 0.8rem;
+        }
+        
+        .trending-product-price {
+            font-size: 1rem;
+        }
+    }
+    
     
     .hero-section .carousel {
         border-radius: 16px;
@@ -550,7 +804,7 @@
     }
     
     .hero-slide {
-        height: 380px;
+        height: 280px;
         position: relative;
         overflow: hidden;
     }
@@ -577,19 +831,22 @@
     }
     
     .hero-badge {
-        display: inline-block;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(12px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
         color: white;
-        padding: 4px 10px;
+        padding: 2px 8px;
         border-radius: 4px;
-        font-size: 0.65rem;
+        font-size: 0.55rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
-        margin-bottom: 1.25rem;
-        border: 2px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        letter-spacing: 1px;
+        margin-bottom: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
     .hero-title {
@@ -623,14 +880,16 @@
         font-size: 0.75rem;
         line-height: 1; /* Fixes vertical text alignment */
         text-decoration: none;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        transition: all 0.2s ease;
+        box-shadow: none;
+        border: 1px solid rgba(0,0,0,0.1);
     }
     
     .btn-hero:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        box-shadow: none;
         color: #1a1a1a;
+        background: #f8f9fa;
     }
     
     .btn-hero i {
@@ -784,33 +1043,36 @@
        ============================================ */
     
     .category-card .card {
-        border-radius: 14px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 6px;
+        transition: all 0.2s ease;
         background: white;
-        border: 1px solid #f0f0f0;
+        border: 1px solid #e5e5e5;
         min-height: 140px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        box-shadow: none;
     }
     
     .category-card .card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
-        border-color: transparent;
+        transform: none;
+        box-shadow: none !important;
+        border-color: #f57224;
+        background: #fffbf8;
     }
     
     .category-icon {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        width: 50px;
+        height: 50px;
+        background: #f8f9fa;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         flex-shrink: 0;
+        border: 1px solid #f0f0f0;
     }
     
     .category-card .card:hover .category-icon {
@@ -973,18 +1235,20 @@
     
     .flash-card-inner {
         background: white;
-        border-radius: 14px;
+        border-radius: 6px;
         overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid #e5e5e5;
+        box-shadow: none;
+        transition: all 0.2s ease;
         height: 100%;
         display: flex;
         flex-direction: column;
     }
     
     .flash-card:hover .flash-card-inner {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        transform: none;
+        box-shadow: none;
+        border-color: #f57224;
     }
     
     .flash-img-container {
@@ -1213,24 +1477,24 @@
     .btn-see-all {
         background: white;
         color: #10b981;
-        border: 2px solid #10b981;
+        border: 1px solid #10b981;
         padding: 10px 28px;
         border-radius: 50px;
         font-weight: 600;
         font-size: 0.9rem;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        box-shadow: none;
     }
 
     .btn-see-all:hover {
         background: #10b981;
         color: white;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        box-shadow: none;
     }
 
     .btn-see-all i {
@@ -1242,16 +1506,18 @@
     }
 
     .trending-card .card {
-        border-radius: 14px;
+        border-radius: 6px;
         overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
         background: white;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        box-shadow: none;
+        border: 1px solid #e5e5e5;
     }
 
     .trending-card:hover .card {
-        transform: translateY(-8px);
-        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+        box-shadow: none;
+        border-color: #f57224;
     }
 
     .trending-image-wrapper {
@@ -1452,22 +1718,24 @@
     
     /* Featured Product Card Container */
     .featured-product-card {
-        border-radius: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 6px;
+        transition: all 0.2s ease;
         overflow: hidden;
         height: 100%;
         background: white;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        box-shadow: none;
+        border: 1px solid #e5e5e5;
     }
     
     .product-card:hover .featured-product-card {
-        transform: translateY(-10px);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.16) !important;
+        transform: translateY(-2px);
+        box-shadow: none !important;
+        border-color: #f57224;
     }
     
-    /* Product Image */
+    /* Product Image - Reduced Height */
     .product-card .product-image-wrapper {
-        height: 240px;
+        height: 170px; /* Reduced further for compactness */
         position: relative;
         overflow: hidden;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -1486,16 +1754,17 @@
     
     /* Product Title */
     .product-card .product-title {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-weight: 600;
         color: #1a1a1a;
-        line-height: 1.4;
+        line-height: 1.3;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        min-height: 2.8em;
+        min-height: 2.6em;
         transition: color 0.2s ease;
+        margin-bottom: 4px !important;
     }
     
     .product-card .product-title:hover {
@@ -1504,56 +1773,81 @@
     
     /* Product Description */
     .product-card .product-description {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         line-height: 1.3;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        min-height: 2.6em;
+        min-height: 1.3em;
+        margin-bottom: 6px !important;
     }
     
-    /* Product Price */
+    /* Premium Price Section */
     .product-card .current-price {
-        font-size: 1.25rem;
-        font-weight: 700;
+        font-size: 1.15rem;
+        font-weight: 800;
         color: #dc2626;
+        letter-spacing: -0.5px;
     }
     
     .product-card .original-price {
         font-size: 0.85rem;
+        color: #9ca3af;
+        text-decoration: line-through;
+        font-weight: 500;
+    }
+
+    .save-badge {
+        background-color: #fee2e2;
+        color: #dc2626;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: auto;
+    }
+
+    .product-price-section {
+        margin-bottom: 10px !important;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
     }
     
-    /* Add to Cart Button - Professional Design */
+    /* Add to Cart Button - Classic Style */
     .add-to-cart-btn {
-        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        background: #dc2626; /* Solid red */
         border: none;
         font-weight: 600;
         font-size: 0.9rem;
         padding: 10px 16px;
         height: 42px;
         border-radius: 8px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 6px;
+        color: white;
     }
     
     .add-to-cart-btn:hover {
-        background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+        background: #b91c1c;
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        color: white;
     }
     
     .add-to-cart-btn:active {
         transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
     }
     
     .add-to-cart-btn i {
-        font-size: 1rem;
+        font-size: 1.1rem;
     }
     
     /* Badge Styling */
@@ -1571,16 +1865,16 @@
     .trust-badge {
         padding: 2rem 1.5rem;
         background: white;
-        border-radius: 16px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        border: 1px solid #f0f0f0;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        box-shadow: none;
+        border: 1px solid #e5e5e5;
     }
     
     .trust-badge:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
-        border-color: transparent;
+        transform: none;
+        box-shadow: none;
+        border-color: #f57224;
     }
     
     .trust-badge i {
@@ -1636,12 +1930,12 @@
     .see-more-button:hover {
         background: linear-gradient(135deg, #5568d3 0%, #6941a1 100%);
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+        box-shadow: none !important;
     }
     
     .see-more-button:active {
         transform: translateY(0);
-        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3) !important;
+        box-shadow: none !important;
     }
     
     .see-more-button i {
@@ -1857,6 +2151,24 @@
             height: 220px !important;
         }
     }
+
+    /* Category Animation Keyframes */
+    @@keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Padding Overrides to ensure 1% padding */
+    .unified-product-info, 
+    .trending-product-details,
+    .flash-product-card .unified-product-info {
+        padding: 5px !important;
+    }
+    
+    .unified-product-title,
+    .trending-product-title {
+        margin-bottom: 4px !important;
+    }
     
 </style>
 
@@ -1901,73 +2213,86 @@
         startCountdown();
     }
     
-    // Add to Cart function
-    async function addToCart(productId, event) {
+    // Add to Cart function - Uses AJAX endpoint for seamless experience
+    async function addToCart(productId, productName, productPrice, productImage, variantId, event) {
+        
         if (event) {
             event.preventDefault();
             event.stopPropagation();
         }
 
-        const card = document.querySelector(`.product-card[data-product-id="${productId}"]`);
-        const variantAttr = card ? card.getAttribute('data-variant-id') : null;
-        const variantId = variantAttr ? parseInt(variantAttr) : null;
-
-        // Logged-in users: use backend cart when we have a valid variant id
-        if (window.isAuthenticated === 'true' && variantId) {
-            try {
-                const body = new URLSearchParams();
-                body.append('productVariantId', variantId.toString());
-                body.append('quantity', '1');
-                body.append('returnUrl', window.location.pathname);
-
-                const response = await fetch('/cart/add', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: body.toString()
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to add to cart');
-                }
-
-                if (typeof updateCartCount === 'function') {
-                    updateCartCount();
-                }
-
-                showToast('Product added to cart!', 'success');
-                return;
-            } catch (e) {
-                showToast('Could not add to cart. Please try again.', 'danger');
+        if (!variantId || variantId <= 0) {
+            // Try to fallback to finding it in the DOM if not provided
+            const card = document.querySelector(`.product-card[data-product-id="${productId}"]`);
+            const variantAttr = card ? card.getAttribute('data-variant-id') : null;
+            variantId = variantAttr ? parseInt(variantAttr) : 0;
+            
+            if (!variantId) {
+                showToast('Product variant not available.', 'danger');
+                console.error('No valid variant ID found for product:', productId);
                 return;
             }
         }
 
-        // Guests or products without variants: fallback to localStorage
-        let cart = JSON.parse(localStorage.getItem('sparkle-cart') || '[]');
+        const btn = event ? event.currentTarget : document.getElementById(`addToCartBtn-${productId}`);
+        const btnText = btn ? btn.querySelector('.btn-text') : null;
+        const spinner = btn ? btn.querySelector('.spinner-border') : null;
 
-        const existingItem = cart.find(item => item.productId === productId);
-        
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            cart.push({
-                id: Date.now(),
-                productId: productId,
-                quantity: 1,
-                name: 'Product',
-                price: 0
-            });
+        if (btn) {
+            btn.disabled = true;
+            if (btnText) btnText.classList.add('opacity-50');
+            if (spinner) spinner.classList.remove('d-none');
         }
+
+        try {
+            const response = await fetch('/cart/add-ajax', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    productVariantId: variantId,
+                    quantity: 1
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(result.message || 'Product added to cart successfully.', 'success');
+                // Update cart count in header
+                updateCartBadge(result.cartCount);
+            } else {
+                showToast(result.message || 'Failed to add to cart', 'danger');
+            }
+        } catch (e) {
+            showToast('Unable to add item. Please try again.', 'danger');
+            console.error('Add to cart error:', e);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                if (btnText) btnText.classList.remove('opacity-50');
+                if (spinner) spinner.classList.add('d-none');
+            }
+        }
+    }
+
+    // Update cart badge in header
+    function updateCartBadge(count) {
+        // Ensure count is a valid number
+        const cartCount = typeof count === 'number' ? count : parseInt(count) || 0;
         
-        localStorage.setItem('sparkle-cart', JSON.stringify(cart));
-        
-        const count = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-        document.getElementById('cartCount').textContent = count > 99 ? '99+' : count;
-        
-        showToast('Product added to cart!', 'success');
+        const cartBadge = document.getElementById('cartCount');
+        if (cartBadge) {
+            // Format display: show 99+ if over 99
+            cartBadge.textContent = cartCount > 99 ? '99+' : cartCount;
+            // Use flex display to match CSS styling in _Layout.cshtml
+            cartBadge.style.display = cartCount > 0 ? 'flex' : 'none';
+        }
     }
     
-    // Add to Wishlist function
+    // Wishing for Wishlist function
     function addToWishlist(productId, event) {
         event.preventDefault();
         event.stopPropagation();
@@ -1975,50 +2300,74 @@
         showToast('Wishlist feature is coming soon.', 'info');
     }
     
-    // Toast notification helper
-    function showToast(message, type) {
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3 animate__animated animate__fadeInRight`;
-        toast.style.zIndex = '9999';
-        toast.innerHTML = `<strong>${message}</strong>`;
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.add('animate__fadeOutRight');
-            setTimeout(() => toast.remove(), 500);
-        }, 3000);
-    }
+    /* Animation Keyframes - NOTE: Moved to style block */
+
+    // ===================================================================
+    // CATEGORY TOGGLE - REBUILT IMPLEMENTATION
+    // Shows 12 categories initially, all 24 when "See More" is clicked
+    // ===================================================================
     
-    // Category Toggle Function - Simplified (No Delays)
-    function toggleCategories() {
-        const allCards = document.querySelectorAll('.category-card-item');
+    function toggleCategoryDisplay(event) {
+        if (event) event.preventDefault();
+        
         const btn = document.getElementById('seeMoreBtn');
         const btnText = document.getElementById('seeMoreText');
         const btnIcon = document.getElementById('seeMoreIcon');
+        const categoryCards = document.querySelectorAll('.category-card-item');
         
-        if (!btn || !btnText || !btnIcon) return;
+        if (!btn || !btnText) {
+            console.error('Button elements not found');
+            return;
+        }
         
+        // Check if we're currently expanded
         const isExpanded = btn.classList.contains('expanded');
         
-        // Simple toggle without animation delays
-        allCards.forEach((card, index) => {
-            if (index >= 12) {
+        // Process each card
+        categoryCards.forEach((card, index) => {
+            // First 12 cards (0-11): Always visible
+            if (index < 12) {
+                card.style.display = '';
+                card.style.removeProperty('display');
+            }
+            // Cards 12-23: Toggle visibility
+            else if (index < 24) {
                 if (isExpanded) {
-                    card.classList.add('category-card-hidden');
+                    // Collapsing - hide cards 12-23
+                    card.style.display = 'none';
                 } else {
-                    card.classList.remove('category-card-hidden');
+                    // Expanding - show cards 12-23 with animation
+                    card.style.display = '';
+                    card.style.removeProperty('display');
+                    card.style.animation = 'fadeInUp 0.3s ease-out forwards';
+                    card.style.animationDelay = `${(index - 12) * 0.05}s`;
                 }
+            }
+            // Cards 24+: Always hidden
+            else {
+                card.style.display = 'none';
             }
         });
         
+        // Toggle button state
         if (isExpanded) {
             btn.classList.remove('expanded');
-            btnText.textContent = '@(isBangla ? "আরও ক্যাটাগরি দেখুন" : "See More Categories")';
+            btnText.textContent = '@(isBangla ? "আরও দেখুন" : "See More")';
+            if (btnIcon) btnIcon.style.transform = 'rotate(0deg)';
         } else {
             btn.classList.add('expanded');
             btnText.textContent = '@(isBangla ? "কম দেখুন" : "See Less")';
+            if (btnIcon) btnIcon.style.transform = 'rotate(180deg)';
         }
     }
+    
+    // Make function globally available
+    window.toggleCategoryDisplay = toggleCategoryDisplay;
+    
+    // Initialize on DOM ready to ensure correct initial state
+    document.addEventListener('DOMContentLoaded', function() {
+        const categoryCards = document.querySelectorAll('.category-card-item');
+    });
     
     // Flash Deals Scroll Function
     function scrollFlashDeals(direction) {
@@ -2048,9 +2397,9 @@
         } else {
             container.scrollLeft = currentScroll + scrollAmount;
         }
-    }
-    
-    // Featured Products Toggle Function - Simplified (No Delays)
+    } 
+
+    // Featured Products Toggle Function - Smooth Animation
     function toggleFeaturedProducts() {
         const allCards = document.querySelectorAll('.product-card-item');
         const btn = document.getElementById('featuredSeeMoreBtn');
@@ -2061,13 +2410,15 @@
         
         const isExpanded = btn.classList.contains('expanded');
         
-        // Simple toggle without animation delays
         allCards.forEach((card, index) => {
             if (index >= 15) {
                 if (isExpanded) {
                     card.classList.add('product-card-hidden');
+                    card.classList.remove('animate-fade-in-up');
                 } else {
                     card.classList.remove('product-card-hidden');
+                    card.style.animationDelay = `${(index - 15) * 0.05}s`;
+                    card.classList.add('animate-fade-in-up');
                 }
             }
         });
@@ -2075,6 +2426,7 @@
         if (isExpanded) {
             btn.classList.remove('expanded');
             btnText.textContent = '@(isBangla ? "আরও প্রোডাক্ট দেখুন" : "See More Products")';
+            document.getElementById('featuredProductsGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
             btn.classList.add('expanded');
             btnText.textContent = '@(isBangla ? "কম দেখুন" : "See Less")';

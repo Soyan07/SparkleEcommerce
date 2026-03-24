@@ -1,0 +1,61 @@
+@{
+    Layout = null;
+    var orderIds = ViewBag.OrderIds;
+    var amount = ViewBag.Amount;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay with ROCKET</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3e5f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .rocket-container { background: white; width: 340px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { background: #8c3494; padding: 15px; text-align: center; color: white; display:flex; justify-content: space-between; align-items: center; }
+        .header h3 { margin: 0; font-weight: bold; font-style: italic; }
+        .summary { background: #f8f9fa; padding: 15px; border-bottom: 1px solid #eee; text-align: center; color: #8c3494; font-weight: bold; font-size: 18px; }
+        .body-content { padding: 25px 20px; }
+        .input-field { margin-bottom: 20px; }
+        .input-field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-field input { width: 100%; border: none; border-bottom: 2px solid #ddd; padding: 8px 0; font-size: 16px; outline: none; transition: 0.3s; }
+        .input-field input:focus { border-bottom-color: #8c3494; }
+        .submit-btn { background: #8c3494; color: white; border: none; width: 100%; padding: 15px; font-size: 16px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .submit-btn:hover { background: #7b2c82; }
+        .cancel-btn { background: #eee; color: #555; border: none; width: 100%; padding: 15px; font-size: 14px; cursor: pointer; text-transform: uppercase; margin-top:0px; }
+    </style>
+</head>
+<body>
+
+    <div class="rocket-container">
+        <div class="header">
+            <h3>ROCKET</h3>
+            <span style="font-size: 12px;">DBBL</span>
+        </div>
+        
+        <div class="summary">
+            Amount: ৳ @amount
+        </div>
+
+        <form action="/payment/process" method="post">
+            <input type="hidden" name="orderIds" value="@orderIds" />
+            
+            <div class="body-content">
+                <div class="input-field">
+                    <label>Mobile Number</label>
+                    <input type="text" placeholder="01xxxxxxxxx-x" required />
+                </div>
+                <div class="input-field">
+                    <label>PIN</label>
+                    <input type="password" placeholder="****" required />
+                </div>
+            </div>
+
+            <button type="submit" name="status" value="success" class="submit-btn">SUBMIT</button>
+            <button type="submit" name="status" value="failure" class="cancel-btn">CANCEL</button>
+        </form>
+    </div>
+
+</body>
+</html>

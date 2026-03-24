@@ -1,174 +1,266 @@
+@using Microsoft.AspNetCore.Identity
+@using Sparkle.Domain.Identity
+@inject Sparkle.Domain.Configuration.ISettingsService SettingsService
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var siteTitle = await SettingsService.GetValueAsync("SiteTitle", "Sparkle");
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentUser = await UserManager.GetUserAsync(User);
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Seller Central</title>
+    <title>@ViewData["Title"] - @siteTitle Seller Center</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script>
         tailwind.config = {
             prefix: 'tw-',
-            corePlugins: {
-                preflight: false, // Disable preflight to avoid conflicts
-            },
             theme: {
                 extend: {
+                    fontFamily: { 
+                        sans: ['Outfit', 'Inter', 'sans-serif'] 
+                    },
                     colors: {
-                        sc: {
-                            bg: '#f3f3f3',
-                            header: '#ffffff',
-                            text: '#0f1111',
-                            link: '#007185',
-                            border: '#d5d9d9',
-                            nav: '#232f3e',
-                            hover: '#f7fafa'
+                        brand: {
+                            orange: '#f97316', // Orange 500
+                            amber: '#f59e0b',  // Amber 500
+                            dark: '#1e293b',
+                            light: '#fff7ed'   // Orange 50
                         }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(249, 115, 22, 0.08)', // Orange-tinted shadow
                     }
                 }
             }
         }
     </script>
-    
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    
     <style>
-        @@font-face {
-            font-family: 'SolaimanLipi';
-            src: url('https://cdn.jsdelivr.net/npm/solaimanlipi@1.0.0/SolaimanLipi.woff2') format('woff2');
-            font-weight: normal;
-            font-style: normal;
-        }
-        
         body {
-            font-family: "Amazon Ember", Arial, sans-serif;
-            background-color: #f3f3f3;
-            margin: 0;
-            color: #0f1111;
+            font-family: 'Outfit', sans-serif;
+            background-color: #fff7ed; /* Soft Orange/Cream background */
         }
         
-        /* Reset some basic elements */
-        a { text-decoration: none; color: inherit; }
-        ul { list-style: none; padding: 0; margin: 0; }
-        
-        /* Header Styles */
-        .sc-header {
-            background: white;
-            border-bottom: 1px solid #d5d9d9;
-            padding: 0 1rem;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
+        .sidebar-wrapper {
+            position: fixed;
             top: 0;
-            z-index: 1000;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background: #ffffff;
+            z-index: 50;
+            border-right: 1px solid rgba(0,0,0,0.02);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
         }
-        
-        .sc-logo {
-            font-size: 18px;
+
+        .main-content {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        .nav-link-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            margin: 6px 16px;
+            color: #1e293b;
+            font-weight: 500;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .nav-link-item:hover {
+            color: #c2410c;
+            background-color: #fef3c7;
+        }
+
+        .nav-link-item.active {
+            color: #9a3412;
+            background-color: #fef3c7;
             font-weight: 700;
-            color: #232f3e;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        }
+
+        .nav-link-item i {
+            font-size: 1.25rem;
+            width: 24px;
+            margin-right: 14px;
+            text-align: center;
         }
         
-        .sc-nav-bar {
-            background: white;
-            border-bottom: 1px solid #d5d9d9;
-            padding: 0 1rem;
-            display: flex;
-            gap: 2rem;
-            overflow-x: auto;
-            white-space: nowrap;
-            height: 45px;
-            align-items: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        /* Header Gradient */
+        .seller-header {
+            background: linear-gradient(135deg, #f97316 0%, #f59e0b 100%);
         }
         
-        .sc-nav-item {
-            font-size: 14px;
-            font-weight: 600;
-            color: #444;
-            padding: 12px 0;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
+        /* Mobile Toggle */
+        @@media (max-width: 1024px) {
+            .sidebar-wrapper { transform: translateX(-100%); }
+            .main-content { margin-left: 0; }
+            body.sidebar-open .sidebar-wrapper { transform: translateX(0); }
         }
-        
-        .sc-nav-item:hover, .sc-nav-item.active {
-            color: #007185;
-            border-bottom-color: #007185;
-        }
-        
-        .sc-main {
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        /* Utility */
-        .text-link { color: #007185; }
-        .text-link:hover { text-decoration: underline; color: #c7511f; }
     </style>
 </head>
-<body>
-    <!-- Top Header -->
-    <header class="sc-header">
-        <div class="tw-flex tw-items-center tw-gap-6">
-            <a href="/seller/dashboard" class="sc-logo">
-                <i class="bi bi-shop"></i> Seller Central
+<body class="tw-text-slate-800">
+
+    <!-- Sidebar -->
+    <aside class="sidebar-wrapper tw-flex tw-flex-col">
+        <!-- Logo Section with Yellow Background -->
+        <div class="tw-bg-gradient-to-b tw-from-amber-100 tw-to-amber-50 tw-min-h-[7rem] tw-flex tw-flex-col tw-items-center tw-justify-center tw-px-4 tw-py-4">
+            <a href="/seller/dashboard" class="tw-block tw-relative">
+                <div class="tw-bg-white tw-rounded-xl tw-px-2 tw-py-1 tw-border-2 tw-border-amber-200 tw-shadow-md tw-relative">
+                    <!-- SELLER Badge -->
+                    <span class="tw-absolute -tw-top-2 -tw-right-2 tw-bg-red-500 tw-text-white tw-text-[10px] tw-font-bold tw-px-2 tw-py-0.5 tw-rounded tw-uppercase tw-tracking-wide tw-shadow-sm">Seller</span>
+                    <!-- Logo Image -->
+                    <img src="/images/logo.png" alt="Sparkle" class="tw-h-12 tw-w-auto" asp-append-version="true" />
+                </div>
+            </a>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="tw-flex-1 tw-overflow-y-auto no-scrollbar tw-py-4">
+            <a href="/Seller/Dashboard" class="nav-link-item @(currentController == "Dashboard" && currentAction == "Index" ? "active" : "")">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+                <span>Overview</span>
             </a>
             
-            <!-- Marketplace Switcher -->
-            <div class="tw-hidden md:tw-flex tw-items-center tw-gap-2 tw-px-3 tw-py-1 tw-bg-gray-100 tw-rounded tw-border tw-border-gray-300 tw-text-sm tw-cursor-pointer hover:tw-bg-gray-200">
-                <span>www.sparkle.com.bd</span>
-                <i class="bi bi-chevron-down tw-text-xs"></i>
+            <a href="/Seller/Dashboard/Products" class="nav-link-item @(currentAction == "Products" || currentAction == "CreateProduct" || currentAction == "EditProduct" ? "active" : "")">
+                <i class="bi bi-box-seam"></i>
+                <span>Products</span>
+            </a>
+
+            <a href="/Seller/Orders" class="nav-link-item @(currentController == "Orders" ? "active" : "")">
+                <i class="bi bi-bag"></i>
+                <span>Orders</span>
+            </a>
+
+            <a href="/Seller/Customer" class="nav-link-item @(currentController == "Customer" ? "active" : "")">
+                <i class="bi bi-people"></i>
+                <span>Customer</span>
+            </a>
+
+            <a href="/Seller/Chat" class="nav-link-item @(currentController == "Chat" ? "active" : "")">
+                <i class="bi bi-chat-dots"></i>
+                <span>Customer Chat</span>
+            </a>
+
+            <a href="/Seller/Shipments" class="nav-link-item @(currentController == "Shipments" ? "active" : "")">
+                <i class="bi bi-truck"></i>
+                <span>Shipment</span>
+            </a>
+
+            <a href="/Seller/Feedback" class="nav-link-item @(currentController == "Feedback" ? "active" : "")">
+                <i class="bi bi-star-fill"></i>
+                <span>Reviews & Feedback</span>
+            </a>
+
+            <a href="/Seller/Dashboard/StoreSettings" class="nav-link-item @(currentAction == "StoreSettings" ? "active" : "")">
+                <i class="bi bi-shop"></i>
+                <span>Store Setting</span>
+            </a>
+        </nav>
+
+        <!-- Upload Widget (Orange Theme) -->
+        <div class="tw-p-6 tw-mb-2">
+            <div class="tw-bg-gradient-to-br tw-from-orange-50 tw-to-amber-50 tw-rounded-3xl tw-p-5 tw-text-center tw-border tw-border-orange-100 tw-shadow-sm tw-relative tw-overflow-hidden">
+                <div class="tw-absolute -tw-top-6 -tw-right-6 tw-w-20 tw-h-20 tw-bg-orange-200/50 tw-rounded-full"></div>
+                
+                <div class="tw-w-12 tw-h-12 tw-bg-gradient-to-r tw-from-orange-500 tw-to-amber-500 tw-text-white tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-3 tw-shadow-lg tw-shadow-orange-200 tw-relative tw-z-10">
+                    <i class="bi bi-plus-lg tw-text-xl"></i>
+                </div>
+                
+                <h4 class="tw-font-bold tw-text-slate-800 tw-text-sm tw-mb-1 tw-relative tw-z-10">New Product</h4>
+                
+                <a href="/Seller/Dashboard/CreateProduct" class="tw-mt-3 tw-inline-block tw-w-full tw-py-2.5 tw-rounded-xl tw-bg-slate-800 hover:tw-bg-slate-900 tw-text-white tw-text-sm tw-font-bold tw-shadow-md tw-transition-all tw-relative tw-z-10">
+                    Upload Now
+                </a>
             </div>
+
         </div>
-        
-        <div class="tw-flex tw-items-center tw-gap-4">
-            <div class="tw-relative tw-hidden md:tw-block">
-                <input type="text" placeholder="Search..." class="tw-px-3 tw-py-1 tw-border tw-border-gray-400 tw-rounded tw-w-64 tw-text-sm focus:tw-border-orange-500 focus:tw-outline-none">
-                <i class="bi bi-search tw-absolute tw-right-2 tw-top-1.5 tw-text-gray-500"></i>
-            </div>
-            
-            <div class="tw-flex tw-items-center tw-gap-4 tw-text-gray-600 tw-text-lg">
-                <a href="#" title="Messages"><i class="bi bi-envelope"></i></a>
-                <a href="#" title="Help"><i class="bi bi-question-circle"></i></a>
-                <a href="/seller/dashboard/store-settings" title="Settings"><i class="bi bi-gear"></i></a>
-            </div>
-            
-            <form action="/auth/logout" method="post" class="tw-m-0">
-                <button type="submit" class="tw-text-sm tw-font-medium tw-text-gray-700 hover:tw-text-red-600 tw-bg-transparent tw-border-0">
-                    Logout
-                </button>
-            </form>
-        </div>
-    </header>
-    
-    <!-- Navigation Bar -->
-    <nav class="sc-nav-bar">
-        <a href="/seller/dashboard" class="sc-nav-item active">Dashboard</a>
-        <a href="/seller/dashboard/products" class="sc-nav-item">Inventory</a>
-        <a href="#" class="sc-nav-item">Pricing</a>
-        <a href="#" class="sc-nav-item">Orders</a>
-        <a href="#" class="sc-nav-item">Advertising</a>
-        <a href="#" class="sc-nav-item">Stores</a>
-        <a href="#" class="sc-nav-item">Growth</a>
-        <a href="#" class="sc-nav-item">Reports</a>
-        <a href="#" class="sc-nav-item">Performance</a>
-        <a href="#" class="sc-nav-item">Apps & Services</a>
-        <a href="#" class="sc-nav-item">B2B</a>
-    </nav>
+    </aside>
 
     <!-- Main Content -->
-    <main class="sc-main">
-        @RenderBody()
+    <main class="main-content">
+        <!-- Header (Orange Theme) -->
+        <header class="seller-header tw-h-28 tw-flex tw-items-center tw-justify-between tw-px-8 tw-shadow-lg tw-shadow-orange-500/15">
+            <h2 class="tw-text-2xl tw-font-bold tw-text-white tw-tracking-tight">@(ViewData["Title"] ?? "Overview")</h2>
+            
+            <div class="tw-flex tw-items-center tw-gap-4">
+                 <!-- Search -->
+                <div class="tw-relative hidden md:tw-block">
+                    <i class="bi bi-search tw-absolute tw-left-4 tw-top-1/2 -tw-translate-y-1/2 tw-text-orange-400"></i>
+                    <input type="text" placeholder="Search" class="tw-pl-10 tw-pr-4 tw-py-2.5 tw-w-72 tw-rounded-full tw-border-none focus:tw-ring-2 focus:tw-ring-white/50 tw-text-sm tw-bg-white tw-font-medium tw-text-slate-700 tw-placeholder-slate-400 tw-shadow-sm" />
+                </div>
+                
+                <button class="tw-w-11 tw-h-11 tw-rounded-full tw-bg-white/25 hover:tw-bg-white/40 tw-text-white tw-backdrop-blur-sm tw-transition-all tw-flex tw-items-center tw-justify-center">
+                    <i class="bi bi-bell-fill tw-text-lg"></i>
+                </button>
+                <form action="/auth/logout" method="post" class="tw-m-0">
+                    <button type="submit" class="tw-w-11 tw-h-11 tw-rounded-full tw-bg-white/25 hover:tw-bg-white/40 tw-text-white tw-backdrop-blur-sm tw-transition-all tw-flex tw-items-center tw-justify-center tw-border-none" title="Logout">
+                        <i class="bi bi-box-arrow-right tw-text-lg"></i>
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <div class="tw-p-6 tw-w-full">
+            @RenderBody()
+        </div>
     </main>
 
+    <script>
+        // Show toast notification
+        function showToast(message, type = 'success', title = '') {
+            const toast = document.createElement('div');
+            // Standardize types: success, danger, info, warning
+            const alertType = type === 'err' || type === 'error' ? 'danger' : type;
+            toast.className = `alert alert-${alertType} position-fixed top-0 end-0 m-3 shadow-lg`;
+            toast.style.zIndex = '12000';
+            
+            let icon = 'info-circle';
+            if (alertType === 'success') icon = 'check-circle';
+            if (alertType === 'danger' || alertType === 'error') icon = 'x-circle';
+            if (alertType === 'warning') icon = 'exclamation-triangle';
+
+            toast.innerHTML = `
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-${icon} fs-5"></i>
+                    <div>
+                        ${title ? `<div class="fw-bold small">${title}</div>` : ''}
+                        <div class="small">${message}</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('tw-opacity-0', 'tw-transition-opacity');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+
+        // Initialize any seller dashboard components here if needed
+        $(document).ready(function() {
+            // ready
+        });
+    </script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -19,13 +19,14 @@ public class CategoryController : Controller
     [HttpGet("{slug}")]
     public async Task<IActionResult> Index(string slug, int page = 1, string? sort = null)
     {
-        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Slug == slug);
+        var category = await _db.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Slug == slug);
         if (category == null)
         {
             return NotFound();
         }
 
         var query = _db.Products
+            .AsNoTracking()
             .Include(p => p.Images)
             .Include(p => p.Variants)
             .Where(p => p.CategoryId == category.Id && p.IsActive);
