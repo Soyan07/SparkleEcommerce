@@ -1,9 +1,11 @@
+using System.Net;
 using System.Text;
 using System.Linq;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Sparkle.Domain.Catalog;
 using Sparkle.Domain.Orders;
 using Sparkle.Domain.Sellers;
@@ -13,17 +15,48 @@ using Sparkle.Infrastructure.Services;
 using Sparkle.Api.Services;
 using Sparkle.Domain.Configuration;
 using StackExchange.Redis;
-var builder = WebApplication.CreateBuilder(args); // Trigger Restart 2
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kestrel for local development and Railway
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Listen(IPAddress.Any, int.Parse(port));
+    });
+}
 
 // Database & Identity
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options => 
-    options.UseSqlServer(connectionString, sqlOptions => {
-        sqlOptions.CommandTimeout(180);
-        sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null);
-        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-    }));
+
+// Support both SQL Server and PostgreSQL
+var isPostgreSQL = connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
+                   connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase);
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    if (isPostgreSQL)
+    {
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.CommandTimeout(180);
+            npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorCodesToAdd: null);
+        });
+    }
+    else
+    {
+        options.UseSqlServer(connectionString, sqlOptions =>
+        {
+            sqlOptions.CommandTimeout(180);
+            sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null);
+            sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        });
+    }
+});
+
+Console.WriteLine($"[INFO] Using {(isPostgreSQL ? "PostgreSQL" : "SQL Server")} database");
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {

@@ -18,8 +18,11 @@ x86/
 bld/
 [Bb]in/
 [Oo]bj/
+bin_safe/
+obj_safe/
 [Ll]og/
 [Ll]ogs/
+publish/
 
 ## .NET Core
 project.lock.json
@@ -103,3 +106,11 @@ appsettings.Production.json
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Environment files (do not commit secrets)
+.env
+.env.*
+
+# Docker
+**/Dockerfile
+**/docker-compose*.yml

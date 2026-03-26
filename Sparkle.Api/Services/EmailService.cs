@@ -23,6 +23,7 @@ public class EmailService : IEmailService
     private readonly string _smtpPassword;
     private readonly string _fromEmail;
     private readonly string _fromName;
+    private readonly string _baseUrl;
     private readonly bool _enableSsl;
 
     public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
@@ -36,6 +37,7 @@ public class EmailService : IEmailService
         _smtpPassword = configuration["Email:Password"] ?? "";
         _fromEmail = configuration["Email:FromEmail"] ?? "noreply@sparkle.com";
         _fromName = configuration["Email:FromName"] ?? "Sparkle";
+        _baseUrl = configuration["App:BaseUrl"] ?? "http://localhost:5279";
         _enableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? "true");
     }
 
@@ -99,7 +101,7 @@ public class EmailService : IEmailService
                             <p><strong>Total Amount:</strong> ৳{totalAmount:N2}</p>
                         </div>
                         <p style='text-align: center;'>
-                            <a href='http://localhost:5279/profile/orders' class='button'>View Order</a>
+                            <a href='{_baseUrl}/profile/orders' class='button'>View Order</a>
                         </p>
                         <p>We'll send you another email when your order ships.</p>
                     </div>
@@ -161,7 +163,7 @@ public class EmailService : IEmailService
                     <div style='background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;'>
                         <p>{message}</p>
                     </div>
-                    <p><a href='http://localhost:5279/profile/tickets'>View Ticket</a></p>
+                    <p><a href='{_baseUrl}/profile/tickets'>View Ticket</a></p>
                 </div>
             </body>
             </html>
