@@ -1,6 +1,3 @@
-# Railway Deployment Configuration
-# Learn more: https://docs.railway.app
-
 {
   "build": {
     "builder": "DOCKERFILE",
