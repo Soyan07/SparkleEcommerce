@@ -89,8 +89,6 @@ ServiceFabricBackup/
 *.edmx.sql
 
 ## User-specific files
-appsettings.Development.json
-appsettings.Production.json
 *.db
 *.db-shm
 *.db-wal
@@ -104,16 +102,12 @@ appsettings.Production.json
 
 ## Windows
 Thumbs.db
-ehthumbs.db
+ehthights.db
 Desktop.ini
 
 # Environment files (do not commit secrets)
 .env
 .env.*
-!.env.template
-
-# Docker
-**/docker-compose*.yml
 
 # Node modules and executables
 node_modules/
