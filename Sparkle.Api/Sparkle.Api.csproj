@@ -36,10 +36,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Condition="Exists('..\Sparkle.Infrastructure\Sparkle.Infrastructure.csproj')" Include="..\Sparkle.Infrastructure\Sparkle.Infrastructure.csproj" />
-    <ProjectReference Condition="Exists('..\Sparkle.Domain\Sparkle.Domain.csproj')" Include="..\Sparkle.Domain\Sparkle.Domain.csproj" />
-    <ProjectReference Condition="Exists('Sparkle.Infrastructure.csproj')" Include="Sparkle.Infrastructure.csproj" />
-    <ProjectReference Condition="Exists('Sparkle.Domain.csproj')" Include="Sparkle.Domain.csproj" />
+    <ProjectReference Include="..\Sparkle.Infrastructure\Sparkle.Infrastructure.csproj" />
+    <ProjectReference Include="..\Sparkle.Domain\Sparkle.Domain.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,14 @@
 [phases.setup]
 nixPkgs = ["...", "dotnet-sdk_8"]
 
+[phases.install]
+cmds = []
+
+[phases.build]
+cmds = [
+  "dotnet publish Sparkle.Api/Sparkle.Api.csproj -c Release -o out"
+]
+
 [variables]
 ASPNETCORE_ENVIRONMENT = "Production"
 ASPNETCORE_URLS = "http://+:8080"
