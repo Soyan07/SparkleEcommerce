@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["...", "dotnet-sdk_8"]
+
+[phases.build]
+cmds = [
+  "dotnet restore Sparkle.sln",
+  "dotnet publish Sparkle.Api/Sparkle.Api.csproj -c Release -o out --no-restore"
+]
+
+[variables]
+ASPNETCORE_ENVIRONMENT = "Production"
+ASPNETCORE_URLS = "http://+:8080"
+PORT = "8080"
+
+[start]
+cmd = "dotnet out/Sparkle.Api.dll"
