@@ -40,6 +40,7 @@ var isPostgreSQL = connectionString.Contains("Host=", StringComparison.OrdinalIg
 
 Console.WriteLine($"[INFO] Connection string source: {(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") != null ? "Environment Variable" : "appsettings.json")}");
 Console.WriteLine($"[INFO] Database type detected: {(isPostgreSQL ? "PostgreSQL" : "SQL Server")}");
+Console.WriteLine($"[INFO] Connection string preview: {connectionString.Split(';')[0]}...");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
