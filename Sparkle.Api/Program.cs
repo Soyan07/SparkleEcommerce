@@ -289,8 +289,17 @@ using (var scope = app.Services.CreateScope())
         // Cleanup Guest Carts on Startup as requested
         try 
         {
-            var result = await db.Database.ExecuteSqlRawAsync("DELETE FROM [orders].[Carts] WHERE [UserId] LIKE 'guest_%'");
-            logger.LogInformation($"[Startup] Cleaned up {result} guest carts.");
+            var isPostgres = isPostgreSQL;
+            if (!isPostgres)
+            {
+                var result = await db.Database.ExecuteSqlRawAsync("DELETE FROM [orders].[Carts] WHERE [UserId] LIKE 'guest_%'");
+                logger.LogInformation($"[Startup] Cleaned up {result} guest carts.");
+            }
+            else
+            {
+                var result = await db.Database.ExecuteSqlRawAsync("DELETE FROM orders.\"Carts\" WHERE \"UserId\" LIKE 'guest_%'");
+                logger.LogInformation($"[Startup] Cleaned up {result} guest carts (PostgreSQL).");
+            }
         }
         catch (Exception ex)
         {
@@ -300,12 +309,20 @@ using (var scope = app.Services.CreateScope())
         // Ensure chat DeletedFor column exists (for delete-for-me vs delete-for-everyone)
         try
         {
-            await db.Database.ExecuteSqlRawAsync(@"
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('support.ChatMessages') AND name = 'DeletedFor')
-                BEGIN
-                    ALTER TABLE [support].[ChatMessages] ADD [DeletedFor] nvarchar(450) NULL;
-                END");
-            logger.LogInformation("[Startup] Chat DeletedFor column ensured.");
+            if (!isPostgreSQL)
+            {
+                await db.Database.ExecuteSqlRawAsync(@"
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('support.ChatMessages') AND name = 'DeletedFor')
+                    BEGIN
+                        ALTER TABLE [support].[ChatMessages] ADD [DeletedFor] nvarchar(450) NULL;
+                    END");
+                logger.LogInformation("[Startup] Chat DeletedFor column ensured (SQL Server).");
+            }
+            else
+            {
+                // PostgreSQL - schema is created by EF Core, column should exist
+                logger.LogInformation("[Startup] Chat DeletedFor column check skipped for PostgreSQL.");
+            }
         }
         catch (Exception ex)
         {

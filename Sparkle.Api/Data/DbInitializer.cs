@@ -28,6 +28,8 @@ namespace Sparkle.Api.Data
             using (var scope = serviceProvider.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var isPostgreSQL = DatabaseHelper.IsPostgreSQL(context);
+                
                 try
                 {
                     // FORCE RESET via Master logic removed.
@@ -40,32 +42,51 @@ namespace Sparkle.Api.Data
                     logger.LogError(ex, "Database migration error.");
                     throw;
                 }
+                
+                // PostgreSQL doesn't need schema repairs - EF Core handles it
+                if (isPostgreSQL)
+                {
+                    logger.LogInformation("PostgreSQL detected - skipping SQL Server schema repairs");
+                    return;
+                }
             }
 
             // 4. Check Schema Version - Skip repairs if already successfully run
-            var currentVersion = await GetCurrentSchemaVersion(serviceProvider);
-            if (currentVersion < 1.3)
+            using (var versionScope = serviceProvider.CreateScope())
             {
-                logger.LogInformation("Applying database schema repairs and updates (Version 1.3)...");
+                var versionContext = versionScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var isPostgresForVersion = DatabaseHelper.IsPostgreSQL(versionContext);
                 
-                // 4. Update Database Schema (Admin Wallets & Indexes)
-                await UpdateDatabaseSchemaAsync(serviceProvider);
+                if (isPostgresForVersion)
+                {
+                    logger.LogInformation("PostgreSQL detected - skipping schema version checks and repairs");
+                    return;
+                }
+                
+                var currentVersion = await GetCurrentSchemaVersion(serviceProvider);
+                if (currentVersion < 1.3)
+                {
+                    logger.LogInformation("Applying database schema repairs and updates (Version 1.3)...");
+                    
+                    // 4. Update Database Schema (Admin Wallets & Indexes)
+                    await UpdateDatabaseSchemaAsync(serviceProvider);
 
-                // 5. Emergency Schema Repairs (Consolidated from Program.cs)
-                await ExecuteSchemaRepairsAsync(serviceProvider);
-                
-                // 6. Update Stored Procedures
-                await UpdateStoredProceduresAsync(serviceProvider);
-                
-                // 7. Initialize Homepage Content Schema
-                await InitializeHomepageContentSchemaAsync(serviceProvider);
+                    // 5. Emergency Schema Repairs (Consolidated from Program.cs)
+                    await ExecuteSchemaRepairsAsync(serviceProvider);
+                    
+                    // 6. Update Stored Procedures
+                    await UpdateStoredProceduresAsync(serviceProvider);
+                    
+                    // 7. Initialize Homepage Content Schema
+                    await InitializeHomepageContentSchemaAsync(serviceProvider);
 
-                await SetSchemaVersion(serviceProvider, 1.3);
-                logger.LogInformation("Database schema version updated to 1.3");
-            }
-            else
-            {
-                logger.LogInformation("Database schema is up to date (Version {Version}). Skipping repairs.", currentVersion);
+                    await SetSchemaVersion(serviceProvider, 1.3);
+                    logger.LogInformation("Database schema version updated to 1.3");
+                }
+                else
+                {
+                    logger.LogInformation("Database schema is up to date (Version {Version}). Skipping repairs.", currentVersion);
+                }
             }
         }
 

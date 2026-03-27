@@ -9,13 +9,19 @@ services:
     healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
-        value: production
+        value: Production
       - key: ASPNETCORE_URLS
         value: http://+:5000
       - key: ConnectionStrings__DefaultConnection
         fromDatabase:
           name: sparkle-db
           property: connectionString
+      - key: JWT__Key
+        generateValue: true
+      - key: JWT__Issuer
+        value: Sparkle
+      - key: JWT__Audience
+        value: SparkleClient
     
   # PostgreSQL Database (Render's free tier supports PostgreSQL, not SQL Server)
   - type: pserv

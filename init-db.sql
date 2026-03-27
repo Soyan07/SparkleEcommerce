@@ -1,25 +1,12 @@
--- Initialize SparkleEcommerce Database
--- This script runs when the SQL Server container starts
+-- PostgreSQL initialization script for Render deployment
+-- This script runs when the PostgreSQL database is created
+-- EF Core will create all tables and schema automatically
 
--- Wait for SQL Server to be ready
-WAITFOR DELAY '00:00:05';
+-- Enable UUID extension for potential use
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create database if it doesn't exist
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'SparkleEcommerce')
+-- Log initialization (this runs once when database is created)
+DO $$
 BEGIN
-    CREATE DATABASE [SparkleEcommerce];
-    PRINT 'Database [SparkleEcommerce] created successfully.';
-END
-ELSE
-BEGIN
-    PRINT 'Database [SparkleEcommerce] already exists.';
-END
-
--- Set as default database for SA user
-USE master;
-GO
-ALTER LOGIN [sa] WITH DEFAULT_DATABASE = [SparkleEcommerce];
-PRINT 'Set [SparkleEcommerce] as default database for SA login.';
-
--- Verify
-SELECT name as DatabaseName, state_desc FROM sys.databases WHERE name = 'SparkleEcommerce';
+    RAISE NOTICE 'SparkleEcommerce PostgreSQL database initialized successfully';
+END $$;
