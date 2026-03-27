@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Sparkle.Domain\Sparkle.Domain.csproj" />
+    <ProjectReference Condition="Exists('..\Sparkle.Domain\Sparkle.Domain.csproj')" Include="..\Sparkle.Domain\Sparkle.Domain.csproj" />
+    <ProjectReference Condition="Exists('Sparkle.Domain.csproj')" Include="Sparkle.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
