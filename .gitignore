@@ -111,7 +111,6 @@ Desktop.ini
 .env
 .env.*
 !.env.template
-appsettings.Development.json
 
 # Docker
 **/docker-compose*.yml
