@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  sparkle-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sparkle-api
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=SparkleDb;User Id=sa;Password=${SQL_SA_PASSWORD};Encrypt=false;TrustServerCertificate=true;Connection Timeout=30;
+      - ASPNETCORE_URLS=http://+:5000
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - sparkle-network
+    restart: unless-stopped
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sparkle-sqlserver
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: ${SQL_SA_PASSWORD}
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - sparkle-network
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${SQL_SA_PASSWORD}", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+
+networks:
+  sparkle-network:
+    driver: bridge

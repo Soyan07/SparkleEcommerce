@@ -1,0 +1,28 @@
+services:
+  # Main .NET API Service
+  - type: web
+    name: sparkle-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: production
+      - key: ASPNETCORE_URLS
+        value: http://+:5000
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: sparkle-db
+          property: connectionString
+    
+  # PostgreSQL Database (Render's free tier supports PostgreSQL, not SQL Server)
+  - type: pserv
+    name: sparkle-db
+    runtime: postgres
+    plan: free
+    ipAllowList: []
+    postgresSQLVersion: "15"
+    initializers:
+      - path: ./init-db.sql
