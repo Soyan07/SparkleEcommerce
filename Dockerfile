@@ -2,6 +2,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Copy NuGet configuration to avoid Windows-specific fallback paths
+COPY NuGet.Config ./
+
 # Copy solution and project files
 COPY Sparkle.sln .
 COPY Sparkle.Api/Sparkle.Api.csproj Sparkle.Api/
