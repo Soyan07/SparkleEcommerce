@@ -42,7 +42,7 @@ Console.WriteLine($"[INFO] Connection string source: {(Environment.GetEnvironmen
 Console.WriteLine($"[INFO] Database type detected: {(isPostgreSQL ? "PostgreSQL" : "SQL Server")}");
 Console.WriteLine($"[INFO] Connection string preview: {connectionString.Split(';')[0]}...");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
 {
     if (isPostgreSQL)
     {
