@@ -245,7 +245,12 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Health endpoint - must be before any middleware
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
 // ==================== FAST STARTUP: Check if everything is already seeded ====================
+try
+{
 using (var initScope = app.Services.CreateScope())
 {
     var initServices = initScope.ServiceProvider;
@@ -287,6 +292,11 @@ using (var initScope = app.Services.CreateScope())
     {
         initLogger.LogWarning(ex, "Homepage section seeding failed (non-critical).");
     }
+}
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[WARN] Database initialization skipped: {ex.Message}");
 }
 
 // Cleanup runs in background (non-blocking)
