@@ -2,8 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy NuGet configuration to avoid Windows-specific fallback paths
+# Clear NuGet cache and set environment to avoid Windows fallback paths
+RUN dotnet nuget locals all --clear
+
+# Copy NuGet configuration and Directory.Build.props first
 COPY NuGet.Config ./
+COPY Directory.Build.props ./
 
 # Copy solution and project files
 COPY Sparkle.sln .
@@ -11,8 +15,8 @@ COPY Sparkle.Api/Sparkle.Api.csproj Sparkle.Api/
 COPY Sparkle.Domain/Sparkle.Domain.csproj Sparkle.Domain/
 COPY Sparkle.Infrastructure/Sparkle.Infrastructure.csproj Sparkle.Infrastructure/
 
-# Restore dependencies
-RUN dotnet restore Sparkle.Api/Sparkle.Api.csproj
+# Restore dependencies with explicit config
+RUN dotnet restore Sparkle.Api/Sparkle.Api.csproj --configfile ./NuGet.Config
 
 # Copy all source code
 COPY . .

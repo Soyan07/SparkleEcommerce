@@ -5,10 +5,14 @@
       during 'dotnet watch' or concurrent builds.
       Redirects all build artifacts to *_safe directories.
     -->
-    <BaseOutputPath>$(MSBuildProjectDirectory)\bin_safe\</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj_safe\</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildProjectDirectory)/bin_safe/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)/obj_safe/</BaseIntermediateOutputPath>
     <!-- EF Core tools compatibility - point to actual obj location -->
-    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)\obj_safe\</MSBuildProjectExtensionsPath>
-    <DefaultItemExcludes>obj\**;bin\**;$(DefaultItemExcludes)</DefaultItemExcludes>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj_safe/</MSBuildProjectExtensionsPath>
+    <DefaultItemExcludes>obj/**;bin/**;$(DefaultItemExcludes)</DefaultItemExcludes>
+    
+    <!-- Disable NuGet fallback folders for cross-platform builds -->
+    <RestoreAdditionalProjectSources></RestoreAdditionalProjectSources>
+    <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
   </PropertyGroup>
 </Project>
