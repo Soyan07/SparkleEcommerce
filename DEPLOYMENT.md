@@ -3,7 +3,7 @@
 ## Prerequisites
 - GitHub account with repository pushed
 - Docker installed (for local testing)
-- Hosting platform account (Render, Railway, etc.)
+- Railway account (https://railway.app)
 
 ## Database Configuration
 
@@ -15,22 +15,20 @@
 
 ## Deployment Options
 
-### Option 1: Render (Recommended)
+### Option 1: Railway (Recommended)
 
-1. **Connect GitHub Repository**
-   - Go to [Render Dashboard](https://dashboard.render.com)
-   - Click "New +" → "Web Service"
-   - Connect your GitHub repository
+1. **Create Project**
+   - Go to [Railway](https://railway.app)
+   - Sign up/login with GitHub
+   - Click "New Project" → "Deploy from GitHub repo"
+   - Select your repository
 
-2. **Configure Service**
-   - Name: `sparkle-ecommerce`
-   - Region: Oregon (or closest to you)
-   - Branch: `main`
-   - Runtime: Docker
-   - Plan: Starter ($7/month)
+2. **Configure Deployment**
+   - Railway auto-detects Dockerfile
+   - Add environment variables
 
 3. **Set Environment Variables**
-   - Click "Environment" tab
+   - Go to your project → Variables
    - Add these variables:
 
    ```env
@@ -43,25 +41,32 @@
    ```
 
 4. **Deploy**
-   - Click "Create Web Service"
-   - Wait for deployment to complete
+   - Railway will auto-deploy
+   - Get URL from deployment settings
 
-### Option 2: Railway
+### Option 2: Azure App Service
 
-1. **Create Project**
-   - Go to [Railway](https://railway.app)
-   - Create new project
-   - Connect GitHub repository
+1. **Create Web App**
+   - Go to [Azure Portal](https://portal.azure.com)
+   - Create Web App → Docker Container
+   - Configure with Dockerfile from GitHub
 
-2. **Add Variables**
-   - Go to Variables section
-   - Add all environment variables from above
+2. **Set Environment Variables**
+   - Application settings → Advanced
+   - Add all environment variables
 
-3. **Deploy**
-   - Railway will auto-detect Dockerfile
-   - Deploy will start automatically
+### Option 3: DigitalOcean App Platform
 
-### Option 3: Local Docker
+1. **Create App**
+   - Go to [DigitalOcean](https://www.digitalocean.com)
+   - Create App → GitHub
+   - Configure with Dockerfile
+
+2. **Add Environment Variables**
+   - App Settings → Environment Variables
+   - Add all variables
+
+### Option 4: Local Docker
 
 ```bash
 # Build and run locally
