@@ -1,5 +1,0 @@
-[phases.build]
-cmd = "dotnet publish Sparkle.Api/Sparkle.Api.csproj -c Release -o out"
-
-[start]
-cmd = "dotnet out/Sparkle.Api.dll"

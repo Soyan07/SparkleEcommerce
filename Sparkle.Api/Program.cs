@@ -1,66 +1,38 @@
 using System.Net;
 using System.Text;
-using System.Linq;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Sparkle.Domain.Catalog;
-using Sparkle.Domain.Orders;
-using Sparkle.Domain.Sellers;
-using Sparkle.Infrastructure;
 using Sparkle.Domain.Identity;
+using Sparkle.Infrastructure;
 using Sparkle.Infrastructure.Services;
 using Sparkle.Api.Services;
 using Sparkle.Domain.Configuration;
-using StackExchange.Redis;
-var builder = WebApplication.CreateBuilder(args);
+using Sparkle.Domain.Sellers;
 
-// Configure Kestrel for local development and Railway
-var port = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrEmpty(port))
-{
-    builder.WebHost.ConfigureKestrel(options =>
-    {
-        options.Listen(IPAddress.Any, int.Parse(port));
-    });
-}
+var builder = WebApplication.CreateBuilder(args);
+var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+var startupLogger = loggerFactory.CreateLogger("Startup");
 
 // Database & Identity
-// Check environment variable first, then config
-var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") 
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
     ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// Support both SQL Server and PostgreSQL
-var isPostgreSQL = connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
-                   connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase) ||
-                   connectionString.Contains("postgresql", StringComparison.OrdinalIgnoreCase);
+startupLogger.LogInformation("Connection string source: {Source}",
+    Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") != null ? "Environment Variable" : "appsettings.json");
+startupLogger.LogInformation("Database: SQL Server");
 
-Console.WriteLine($"[INFO] Connection string source: {(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") != null ? "Environment Variable" : "appsettings.json")}");
-Console.WriteLine($"[INFO] Database type detected: {(isPostgreSQL ? "PostgreSQL" : "SQL Server")}");
-Console.WriteLine($"[INFO] Connection string preview: {connectionString.Split(';')[0]}...");
-
+// Azure Free Tier: reduced pool size (1GB RAM limit)
 builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
 {
-    if (isPostgreSQL)
+    options.UseSqlServer(connectionString, sqlOptions =>
     {
-        options.UseNpgsql(connectionString, npgsqlOptions =>
-        {
-            npgsqlOptions.CommandTimeout(180);
-            npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorCodesToAdd: null);
-        });
-    }
-    else
-    {
-        options.UseSqlServer(connectionString, sqlOptions =>
-        {
-            sqlOptions.CommandTimeout(builder.Environment.IsDevelopment() ? 30 : 180);
-            sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null);
-            sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-        });
-    }
+        sqlOptions.CommandTimeout(builder.Environment.IsDevelopment() ? 30 : 180);
+        sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null);
+        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    });
 
     if (builder.Environment.IsDevelopment())
     {
@@ -68,25 +40,20 @@ builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
         options.EnableDetailedErrors(false);
         options.LogTo(_ => { }, LogLevel.Warning);
     }
-}, poolSize: 128);
-
-Console.WriteLine($"[INFO] Using {(isPostgreSQL ? "PostgreSQL" : "SQL Server")} database");
+}, poolSize: 32);
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
-        // Password settings
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;
-        options.Password.RequireUppercase = false; // User didn't explicitly ask, but good practice. Kept false to strictly follow "num and word" minimal request, but example has Uppercase. Let's keep false to not be too annoying, enforcing Alphanumeric is key.
-        options.Password.RequireNonAlphanumeric = false; // User didn't explicitly ask for symbols in text description, though example has it.
+        options.Password.RequireUppercase = false;
+        options.Password.RequireNonAlphanumeric = false;
         options.Password.RequiredLength = 6;
         
-        // Lockout settings
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.AllowedForNewUsers = true;
         
-        // User settings
         options.User.RequireUniqueEmail = true;
         options.SignIn.RequireConfirmedEmail = false;
         options.SignIn.RequireConfirmedAccount = false;
@@ -94,7 +61,7 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// Google OAuth for Users Only
+// Google OAuth
 var googleClientId = builder.Configuration["Google:ClientId"];
 var googleClientSecret = builder.Configuration["Google:ClientSecret"];
 var isGoogleConfigured = !string.IsNullOrWhiteSpace(googleClientId) && 
@@ -111,21 +78,17 @@ if (isGoogleConfigured)
             options.ClientSecret = googleClientSecret!;
             options.SaveTokens = true;
         });
-    Console.WriteLine($"[OK] Google OAuth authentication is enabled. ClientId: {googleClientId?[..5]}... (Redacted)");
-    Console.WriteLine("[INFO] Verifying SQL Server connection...");
+    startupLogger.LogInformation("Google OAuth enabled.");
 }
 else
 {
-    Console.WriteLine("[INFO] Google OAuth is NOT configured. Google login will be disabled.");
-    Console.WriteLine("[INFO] To enable Google login, see GOOGLE_OAUTH_SETUP_GUIDE.md in the project root.");
+    startupLogger.LogInformation("Google OAuth not configured.");
 }
 
-// Store configuration status for use in views
-builder.Services.AddSingleton<Sparkle.Api.Services.IGoogleAuthConfigurationService>(sp => 
-    new Sparkle.Api.Services.GoogleAuthConfigurationService(isGoogleConfigured));
+builder.Services.AddSingleton<IGoogleAuthConfigurationService>(sp => 
+    new GoogleAuthConfigurationService(isGoogleConfigured));
 
-
-// Configure cookie authentication
+// Cookie authentication
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/auth/login";
@@ -137,7 +100,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
-// JWT Authentication for APIs (cookies remain default for MVC)
+// JWT Authentication for APIs
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("JWT Key is missing");
 var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
@@ -158,57 +121,48 @@ builder.Services.AddAuthentication()
     });
 
 // Application Services
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.ICommissionService, Sparkle.Infrastructure.Services.CommissionService>();
-builder.Services.AddScoped<Sparkle.Domain.Marketing.ILoyaltyService, Sparkle.Infrastructure.Services.LoyaltyService>();
-builder.Services.AddScoped<Sparkle.Domain.Configuration.ISettingsService, Sparkle.Api.Services.SettingsService>();
-builder.Services.AddTransient<Sparkle.Infrastructure.Services.LocationSeedingService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IDynamicFormService, Sparkle.Api.Services.DynamicFormService>();
-builder.Services.AddScoped<Sparkle.Api.Services.DynamicFormSeedingService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IProductService, Sparkle.Api.Services.ProductService>();
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.ShipmentService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IReviewService, Sparkle.Api.Services.ReviewService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IEmailService, Sparkle.Api.Services.EmailService>();
-builder.Services.AddScoped<Sparkle.Api.Services.ICachingService, Sparkle.Api.Services.RedisCachingService>();
-builder.Services.AddScoped<Sparkle.Api.Services.ISellerPerformanceService, Sparkle.Api.Services.SellerPerformanceService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IInvoiceService, Sparkle.Api.Services.InvoiceService>();
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.IAIService, Sparkle.Infrastructure.Services.AIService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IStockManagementService, Sparkle.Api.Services.StockManagementService>();
-
-// Homepage Sections & Intelligent Analysis Services
-builder.Services.AddScoped<Sparkle.Api.Services.IHomepageSectionService, Sparkle.Api.Services.HomepageSectionService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IIntelligentProductAnalysisService, Sparkle.Api.Services.IntelligentProductAnalysisService>();
-builder.Services.AddScoped<Sparkle.Api.Services.IAIRecommendationService, Sparkle.Api.Services.AIRecommendationService>();
-builder.Services.AddScoped<Sparkle.Api.Services.HomepageSectionSeedingService>();
-
-// Seller Authorization & Stock Management
-builder.Services.AddScoped<Sparkle.Api.Services.ISellerAuthorizationService, Sparkle.Api.Services.SellerAuthorizationService>();
-
-// New Platform Services from Package
+builder.Services.AddScoped<ICommissionService, CommissionService>();
+builder.Services.AddScoped<Sparkle.Domain.Marketing.ILoyaltyService, LoyaltyService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddTransient<LocationSeedingService>();
+builder.Services.AddScoped<IDynamicFormService, DynamicFormService>();
+builder.Services.AddScoped<DynamicFormSeedingService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ShipmentService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ICachingService, RedisCachingService>();
+builder.Services.AddScoped<ISellerPerformanceService, SellerPerformanceService>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IAIService, AIService>();
+builder.Services.AddScoped<IStockManagementService, StockManagementService>();
+builder.Services.AddScoped<IHomepageSectionService, HomepageSectionService>();
+builder.Services.AddScoped<IIntelligentProductAnalysisService, IntelligentProductAnalysisService>();
+builder.Services.AddScoped<IAIRecommendationService, AIRecommendationService>();
+builder.Services.AddScoped<HomepageSectionSeedingService>();
+builder.Services.AddScoped<ISellerAuthorizationService, SellerAuthorizationService>();
 builder.Services.AddScoped<Sparkle.Domain.Intelligence.ISmartSearchService, Sparkle.Infrastructure.Intelligence.SmartSearchService>();
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.IWalletService, Sparkle.Infrastructure.Services.WalletService>();
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.ISupportService, Sparkle.Infrastructure.Services.SupportService>();
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.ILogisticsService, Sparkle.Infrastructure.Services.LogisticsService>();
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.INotificationService, Sparkle.Api.Services.NotificationService>();
-builder.Services.AddScoped<Sparkle.Infrastructure.Services.IPaymentService, Sparkle.Infrastructure.Services.SSLCommerzService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<ISupportService, SupportService>();
+builder.Services.AddScoped<ILogisticsService, LogisticsService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IPaymentService, SSLCommerzService>();
 
-// Swagger/OpenAPI Documentation
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// SignalR with Redis Backplane (optional - falls back to in-memory if Redis unavailable)
+// SignalR
 builder.Services.AddSignalR();
-// Session Support for Checkout
-builder.Services.AddDistributedMemoryCache(); // Force Memory Cache for reliability
+
+// Session (Azure Free Tier: reduced timeout)
+builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(60);
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.Name = ".Sparkle.Session";
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
-// Response Compression for better performance
+// Response Compression
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -226,10 +180,8 @@ builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompress
     options.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
-// Response Caching
 builder.Services.AddResponseCaching();
 
-// Add services to the container.
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
@@ -239,147 +191,123 @@ builder.Services.AddControllersWithViews()
 
 builder.Services.AddRazorPages();
 
-// Swagger/OpenAPI
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+}
 
 var app = builder.Build();
 
-// Health endpoint - must be before any middleware
+// Health endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
-// ==================== FAST STARTUP: Check if everything is already seeded ====================
+// Database initialization
 try
 {
-using (var initScope = app.Services.CreateScope())
-{
-    var initServices = initScope.ServiceProvider;
-    var initLogger = initServices.GetRequiredService<ILogger<Program>>();
-    var initDb = initServices.GetRequiredService<ApplicationDbContext>();
+    using (var initScope = app.Services.CreateScope())
+    {
+        var initServices = initScope.ServiceProvider;
+        var initLogger = initServices.GetRequiredService<ILogger<Program>>();
+        var initDb = initServices.GetRequiredService<ApplicationDbContext>();
 
-    try
-    {
-        await Sparkle.Api.Data.DbInitializer.InitializeAsync(initServices);
-    }
-    catch (Exception ex)
-    {
-        initLogger.LogError(ex, "Database initialization failed.");
-    }
+        try
+        {
+            await Sparkle.Api.Data.DbInitializer.InitializeAsync(initServices);
+        }
+        catch (Exception ex)
+        {
+            initLogger.LogError(ex, "Database initialization failed.");
+        }
 
-    // Single fast check: if sellers + products + zones all exist, skip ALL seeding
-    var hasSellers = await initDb.Sellers.AnyAsync();
-    var hasProducts = hasSellers && await initDb.Products.AnyAsync();
-    var hasZones = hasProducts && await initDb.DeliveryZones.AnyAsync();
-    var hasSettings = hasZones && await initDb.SiteSettings.AnyAsync();
+        var allExist = await initDb.Database.SqlQueryRaw<int>(
+            @"SELECT CASE WHEN 
+                EXISTS (SELECT 1 FROM [sellers].[Sellers]) AND
+                EXISTS (SELECT 1 FROM [catalog].[Products]) AND
+                EXISTS (SELECT 1 FROM [DeliveryZones]) AND
+                EXISTS (SELECT 1 FROM [system].[SiteSettings])
+            THEN 1 ELSE 0 END AS Value").SingleAsync() == 1;
 
-    if (hasSellers && hasProducts && hasZones && hasSettings)
-    {
-        initLogger.LogInformation("[FastStart] All data exists. Skipping seeding.");
-    }
-    else
-    {
-        initLogger.LogInformation("[FastStart] Seeding required. Starting initialization...");
-        await SeedAllDataAsync(app.Services, isPostgreSQL);
-    }
+        if (allExist)
+        {
+            initLogger.LogInformation("[FastStart] All data exists. Skipping seeding.");
+        }
+        else
+        {
+            initLogger.LogInformation("[FastStart] Seeding required. Starting initialization...");
+            await SeedAllDataAsync(app.Services);
+        }
 
-    // Homepage sections (lightweight, always run)
-    try
-    {
-        var sectionSeeder = initServices.GetRequiredService<Sparkle.Api.Services.HomepageSectionSeedingService>();
-        await sectionSeeder.SeedAsync();
+        try
+        {
+            var sectionSeeder = initServices.GetRequiredService<HomepageSectionSeedingService>();
+            await sectionSeeder.SeedAsync();
+        }
+        catch (Exception ex)
+        {
+            initLogger.LogWarning(ex, "Homepage section seeding failed (non-critical).");
+        }
     }
-    catch (Exception ex)
-    {
-        initLogger.LogWarning(ex, "Homepage section seeding failed (non-critical).");
-    }
-}
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"[WARN] Database initialization skipped: {ex.Message}");
+    startupLogger.LogWarning(ex, "Database initialization skipped.");
 }
 
-// Cleanup runs in background (non-blocking)
+// Background cleanup (non-blocking)
 _ = Task.Run(async () =>
 {
     try
     {
         using var bgScope = app.Services.CreateScope();
         var bgDb = bgScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        if (!isPostgreSQL)
-        {
-            await bgDb.Database.ExecuteSqlRawAsync("DELETE FROM [orders].[Carts] WHERE [UserId] LIKE 'guest_%'");
-        }
-        else
-        {
-            await bgDb.Database.ExecuteSqlRawAsync("DELETE FROM orders.\"Carts\" WHERE \"UserId\" LIKE 'guest_%'");
-        }
+        await bgDb.Database.ExecuteSqlRawAsync("DELETE FROM [orders].[Carts] WHERE [UserId] LIKE 'guest_%'");
     }
-    catch { /* Silent fail for background cleanup */ }
+    catch { }
 });
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-else
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-    // Only redirect to HTTPS in production
-    app.UseHttpsRedirection();
-}
-
-// Enable response compression (must be before UseStaticFiles)
-// Disable in Development to allow Hot Reload script injection
-if (!app.Environment.IsDevelopment())
-{
-    app.UseResponseCompression();
-}
-
-// Static files with caching
-app.UseStaticFiles(new StaticFileOptions
-{
-    OnPrepareResponse = ctx =>
-    {
-        // Cache static files for 7 days
-        const int durationInSeconds = 60 * 60 * 24 * 7;
-        ctx.Context.Response.Headers.Append("Cache-Control", $"public,max-age={durationInSeconds}");
-    }
-});
-
-app.UseRouting();
-
-app.UseResponseCaching(); // Re-enabled to fix VaryByQueryKeys error
-
-app.UseSession(); // Enable session for checkout flow
-
-// Global exception handler - must be early in pipeline
-app.UseMiddleware<Sparkle.Api.Middleware.GlobalExceptionMiddleware>();
-
-// Security headers middleware
-app.UseMiddleware<Sparkle.Api.Middleware.SecurityMiddleware>();
-
-// Admin action logging middleware
-app.UseMiddleware<Sparkle.Api.Middleware.AdminActionLoggingMiddleware>();
-
-// Swagger UI (only in Development)
+// HTTP pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sparkle API V1");
-        options.RoutePrefix = "api-docs"; // Access at /api-docs
+        options.RoutePrefix = "api-docs";
     });
 }
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseResponseCompression();
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        const int durationInSeconds = 60 * 60 * 24 * 7;
+        ctx.Context.Response.Headers.Append("Cache-Control", $"public,max-age={durationInSeconds}");
+    }
+});
+
+app.UseRouting();
+app.UseResponseCaching();
+app.UseSession();
+
+app.UseMiddleware<Sparkle.Api.Middleware.GlobalExceptionMiddleware>();
+app.UseMiddleware<Sparkle.Api.Middleware.SecurityMiddleware>();
+app.UseMiddleware<Sparkle.Api.Middleware.AdminActionLoggingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-// MVC routes for UI panels
 app.MapControllerRoute(
     name: "areas",
     pattern: "{area:exists}/{controller=Dashboard}/{action=Index}/{id?}");
@@ -388,17 +316,16 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Attribute-routed API controllers
 app.MapControllers();
 
-// SignalR Hub Routes
+// SignalR Hubs
 app.MapHub<Sparkle.Api.Hubs.InventoryHub>("/hubs/inventory");
 app.MapHub<Sparkle.Api.Hubs.OrderTrackingHub>("/hubs/ordertracking");
 app.MapHub<Sparkle.Api.Hubs.NotificationHub>("/hubs/notification");
 app.MapHub<Sparkle.Api.Hubs.ChatHub>("/hubs/chat");
 
-// ==================== SEEDING METHOD (extracted for fast-start optimization) ====================
-async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
+// ==================== SEEDING ====================
+async Task SeedAllDataAsync(IServiceProvider rootServices)
 {
     using var scope = rootServices.CreateScope();
     var services = scope.ServiceProvider;
@@ -410,27 +337,20 @@ async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
         var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 
-        // Batch role check: load all existing roles in one query
-        var existingRoleNames = await roleManager.Roles
-            .Select(r => r.Name)
-            .ToListAsync();
+        var existingRoleNames = await roleManager.Roles.Select(r => r.Name).ToListAsync();
 
         string[] roles = ["User", "Seller", "Admin"];
         foreach (var roleName in roles)
         {
             if (!existingRoleNames.Contains(roleName))
-            {
                 await roleManager.CreateAsync(new ApplicationRole { Name = roleName });
-            }
         }
 
-        // Batch user check: load all seed users in one query
-        var seedEmails = new[] { "admin@sparkle.local", "user@sparkle.local", "misoyan07@gmail.com" };
+        var seedEmails = new[] { "admin@sparkle.local", "user@sparkle.local" };
         var existingUsers = await db.Users
             .Where(u => seedEmails.Contains(u.Email))
             .ToDictionaryAsync(u => u.Email!);
 
-        // Admin user
         if (!existingUsers.ContainsKey("admin@sparkle.local"))
         {
             var admin = new ApplicationUser
@@ -445,24 +365,20 @@ async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
                 await userManager.AddToRoleAsync(admin, "Admin");
         }
 
-        // Chat column check (non-critical)
         try
         {
-            if (!isPostgres)
-            {
-                await db.Database.ExecuteSqlRawAsync(@"
-                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('support.ChatMessages') AND name = 'DeletedFor')
-                    BEGIN
-                        ALTER TABLE [support].[ChatMessages] ADD [DeletedFor] nvarchar(450) NULL;
-                    END");
-            }
+            await db.Database.ExecuteSqlRawAsync(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('support.ChatMessages') AND name = 'DeletedFor')
+                BEGIN
+                    ALTER TABLE [support].[ChatMessages] ADD [DeletedFor] nvarchar(450) NULL;
+                END");
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Chat DeletedFor column check failed (non-critical).");
         }
 
-        // Categories (batch upsert)
+        // Categories
         var requiredCategories = new List<Category>
         {
             new() { Name = "Electronics & Gadgets", Slug = "electronics-gadgets" },
@@ -506,7 +422,7 @@ async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
         if (db.ChangeTracker.HasChanges())
             await db.SaveChangesAsync();
 
-        // Sellers (only if none exist)
+        // Sellers
         if (!await db.Sellers.AnyAsync())
         {
             var sellerConfigs = new[]
@@ -538,7 +454,6 @@ async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
                 new { Email = "kidszone@sparkle.local", Password = "Vendor@123", FullName = "Roksana Akter", ShopName = "Kids Zone Fashion", ShopDescription = "Trendy kids clothing, shoes, school uniforms.", City = "Dhaka", District = "Dhaka", Phone = "+880 1957-789012", Bkash = "01957789012", Rating = 4.7m, Address = "45, Elephant Road, Dhaka-1205" }
             };
 
-            var sellers = new List<Seller>();
             foreach (var config in sellerConfigs)
             {
                 var sellerUser = new ApplicationUser
@@ -573,18 +488,16 @@ async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
                         ApprovedAt = DateTime.UtcNow.AddMonths(-Random.Shared.Next(1, 6))
                     };
                     db.Sellers.Add(seller);
-                    sellers.Add(seller);
                 }
             }
             await db.SaveChangesAsync();
         }
 
-        // Product seeding
-        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
-        var productSeeder = new Sparkle.Api.Services.ProductSeedingService(db, loggerFactory.CreateLogger<Sparkle.Api.Services.ProductSeedingService>());
+        // Products
+        var productSeeder = new ProductSeedingService(db, services.GetRequiredService<ILoggerFactory>().CreateLogger<ProductSeedingService>());
         await productSeeder.SeedProductsAsync();
 
-        // Demo users
+        // Demo user
         if (!existingUsers.ContainsKey("user@sparkle.local"))
         {
             var customerUser = new ApplicationUser { UserName = "user@sparkle.local", Email = "user@sparkle.local", EmailConfirmed = true, FullName = "Demo Customer" };
@@ -592,17 +505,10 @@ async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
                 await userManager.AddToRoleAsync(customerUser, "User");
         }
 
-        if (!existingUsers.ContainsKey("misoyan07@gmail.com"))
-        {
-            var soyanUser = new ApplicationUser { UserName = "misoyan07@gmail.com", Email = "misoyan07@gmail.com", EmailConfirmed = true, FullName = "Soyan" };
-            if ((await userManager.CreateAsync(soyanUser, "89694929Soyan@07")).Succeeded)
-                await userManager.AddToRoleAsync(soyanUser, "User");
-        }
-
         // Delivery zones
         if (!await db.DeliveryZones.AnyAsync())
         {
-            var locationSeeder = services.GetRequiredService<Sparkle.Infrastructure.Services.LocationSeedingService>();
+            var locationSeeder = services.GetRequiredService<LocationSeedingService>();
             var zones = locationSeeder.GetZones();
             db.DeliveryZones.AddRange(zones);
             await db.SaveChangesAsync();
@@ -636,7 +542,7 @@ async Task SeedAllDataAsync(IServiceProvider rootServices, bool isPostgres)
         }
 
         // Dynamic forms
-        var dynamicFormSeeder = services.GetRequiredService<Sparkle.Api.Services.DynamicFormSeedingService>();
+        var dynamicFormSeeder = services.GetRequiredService<DynamicFormSeedingService>();
         await dynamicFormSeeder.SeedFormsAsync();
     }
     catch (Exception ex)

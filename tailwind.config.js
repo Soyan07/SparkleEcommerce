@@ -5,9 +5,9 @@ module.exports = {
     preflight: false,
   },
   content: [
-    "C:/Users/User/Desktop/Sparkle Ecommerce/**/*.cshtml",
-    "C:/Users/User/Desktop/Sparkle Ecommerce/**/*.html",
-    "C:/Users/User/Desktop/Sparkle Ecommerce/**/*.js"
+    "./Sparkle.Api/**/*.cshtml",
+    "./Sparkle.Api/**/*.html",
+    "./Sparkle.Api/**/*.js"
   ],
   theme: {
     extend: {},

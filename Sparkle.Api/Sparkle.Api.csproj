@@ -28,7 +28,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.*" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.*" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.*" />
     <PackageReference Include="QuestPDF" Version="2023.12.0" />
     <PackageReference Include="StackExchange.Redis" Version="2.7.27" />
