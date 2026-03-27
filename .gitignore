@@ -112,7 +112,6 @@ Desktop.ini
 .env.*
 
 # Docker
-**/Dockerfile
 **/docker-compose*.yml
 
 # Node modules and executables
