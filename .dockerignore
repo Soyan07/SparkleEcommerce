@@ -1,0 +1,17 @@
+**/.git
+**/.gitignore
+**/.dockerignore
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/bin_safe
+**/obj_safe
+**/node_modules
+**/.DS_Store
+**/*.md
+**/.idea
+**/logs
+**/temp
+**/__pycache__
+**/.pytest_cache
