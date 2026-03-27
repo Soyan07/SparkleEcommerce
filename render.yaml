@@ -12,7 +12,7 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://+:5000
-      - key: ConnectionStrings__DefaultConnection
+      - key: ConnectionStrings:DefaultConnection
         fromDatabase:
           name: sparkle-db
           property: connectionString

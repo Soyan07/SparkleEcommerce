@@ -28,12 +28,18 @@ if (!string.IsNullOrEmpty(port))
 }
 
 // Database & Identity
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+// Check environment variable first, then config
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 // Support both SQL Server and PostgreSQL
 var isPostgreSQL = connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
-                   connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase);
+                   connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase) ||
+                   connectionString.Contains("postgresql", StringComparison.OrdinalIgnoreCase);
+
+Console.WriteLine($"[INFO] Connection string source: {(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") != null ? "Environment Variable" : "appsettings.json")}");
+Console.WriteLine($"[INFO] Database type detected: {(isPostgreSQL ? "PostgreSQL" : "SQL Server")}");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {

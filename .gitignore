@@ -110,6 +110,8 @@ Desktop.ini
 # Environment files (do not commit secrets)
 .env
 .env.*
+!.env.template
+appsettings.Development.json
 
 # Docker
 **/docker-compose*.yml
