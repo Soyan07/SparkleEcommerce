@@ -22,32 +22,18 @@ public class ProductSeedingService
 
     public async Task SeedProductsAsync()
     {
-        // Performance indexes check independent of seeding logic
-        await EnsurePerformanceIndexesAsync();
+        // Check if products already exist (single query, no expensive joins)
+        var productsExist = await _db.Products.AnyAsync();
 
-        // Ensure all sellers are approved/active so their products show up
-        // REMOVED: Unconditional approval on startup breaks the 'Pending' workflow.
-        // Existing 'Active' (1) sellers are automatically mapped to 'Approved' (1) by Enum integer value preservation.
-        /*
-        var inactiveSellers = await _db.Sellers.Where(s => s.Status != SellerStatus.Approved).ToListAsync();
-        if (inactiveSellers.Any())
+        if (productsExist)
         {
-            foreach (var s in inactiveSellers) s.Status = SellerStatus.Approved;
-            await _db.SaveChangesAsync();
-        }
-        */
-
-        // Check if products already exist
-        // Check if products already exist (optimized to check limit only)
-        var productsExist = await _db.Products.OrderBy(p => p.Id).Skip(20).AnyAsync();
-        var dailyEssentialsExist = await _db.Products.AnyAsync(p => p.Seller != null && p.Seller.ShopName == "Daily Essentials BD");
-
-        if (productsExist && dailyEssentialsExist)
-        {
-            _logger.LogInformation("Products already seeded. Checking Flash Sale items...");
+            // Only run flash sale check (indexes are idempotent, skip on restart)
             await EnsureFlashSaleProductsAsync();
             return;
         }
+
+        // First-time setup: run performance indexes
+        await EnsurePerformanceIndexesAsync();
 
         _logger.LogInformation("Starting product seeding...");
 

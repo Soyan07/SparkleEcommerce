@@ -42,3 +42,6 @@ publish/
 *.zip
 *.tar.gz
 *.bak
+
+# Windows reserved device name
+nul

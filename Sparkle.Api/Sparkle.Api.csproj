@@ -5,6 +5,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    
+    <!-- Hot Reload Optimization -->
+    <HotReloadEnabled>true</HotReloadEnabled>
+    <SuppressImplicitPackAssembliesOnError>true</SuppressImplicitPackAssembliesOnError>
+    
+    <!-- Build Performance -->
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+    <BuildInParallel>true</BuildInParallel>
+    
+    <!-- Reduce startup verbosity -->
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
   </PropertyGroup>
 
   <ItemGroup>
